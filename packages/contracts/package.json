@@ -7,6 +7,7 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "node": "hardhat node",
+    "deploy:sepolia": "hardhat run scripts/deploy-confidential.ts --network sepolia",
     "clean": "hardhat clean"
   },
   "devDependencies": {
