@@ -3,15 +3,15 @@
   "network": "sepolia",
   "note": "Phase 2 deploys the confidential balance rail (mock underlyings + ERC-7984 wrappers). Intent/epoch/settlement contracts land in Phases 3-4. Run `pnpm deploy:confidential --network sepolia` to populate.",
   "contracts": {
-    "MockUSDC": null,
-    "NoxageConfidentialUSDC": null,
-    "MockWETH": null,
-    "NoxageConfidentialWETH": null,
+    "MockUSDC": "0x2745eaFb07Aee70e8c8122c58995AA38FC3bb71D",
+    "NoxageConfidentialUSDC": "0x15caB567a82cfF81B21d8d5d00eEEb4088e9F0a7",
+    "MockWETH": "0xb9e937Ed67125D30d82b48aB9Ec234b1B39c9176",
+    "NoxageConfidentialWETH": "0x5D228c8976178725a723C14A6BD6Fa5Bc35004Cb",
     "NoxageIntentBook": null,
     "NoxageEpochManager": null,
     "NoxageSettlementExecutor": null,
     "NoxageFillLedger": null,
     "UniswapV3SwapRouter": null
   },
-  "updatedAt": null
+  "updatedAt": "2026-07-20T21:01:37.342Z"
 }
