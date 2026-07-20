@@ -1,0 +1,40 @@
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  color: var(--stat-label-color);
+  font-size: var(--fs-step--1);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  line-height: var(--lh-snug);
+}
+
+.value {
+  color: var(--stat-value-color);
+  font-size: var(--fs-step-2);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.change {
+  font-size: var(--fs-step--1);
+  font-weight: var(--weight-medium);
+  line-height: var(--lh-snug);
+}
+
+.positive {
+  color: var(--success);
+}
+
+.negative {
+  color: var(--danger);
+}
+
+.neutral {
+  color: var(--text-muted);
+}

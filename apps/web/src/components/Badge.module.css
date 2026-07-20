@@ -1,0 +1,51 @@
+.badge {
+  --_bg: var(--surface-inset);
+  --_fg: var(--text-secondary);
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: calc(var(--space-1) - 1px) var(--space-2);
+  background: var(--_bg);
+  color: var(--_fg);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-step--1);
+  font-weight: var(--weight-medium);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.default {
+  --_bg: var(--surface-inset);
+  --_fg: var(--text-secondary);
+}
+
+.accent {
+  --_bg: var(--accent-muted);
+  --_fg: var(--accent);
+}
+
+.success {
+  --_bg: var(--success-muted);
+  --_fg: var(--success);
+}
+
+.warning {
+  --_bg: var(--warning-muted);
+  --_fg: var(--warning);
+}
+
+.danger {
+  --_bg: var(--danger-muted);
+  --_fg: var(--danger);
+}
+
+.private {
+  --_bg: var(--badge-private-bg);
+  --_fg: var(--badge-private-fg);
+}
+
+.public {
+  --_bg: var(--badge-public-bg);
+  --_fg: var(--badge-public-fg);
+}

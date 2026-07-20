@@ -1,0 +1,127 @@
+/* Base button — local private vars for variants */
+.btn {
+  --_bg: transparent;
+  --_fg: var(--text-primary);
+  --_bg-hover: var(--surface-2);
+  --_border: var(--border-subtle);
+  --_shadow: none;
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--btn-padding-y) var(--btn-padding-x);
+  background: var(--_bg);
+  color: var(--_fg);
+  border: 1px solid var(--_border);
+  border-radius: var(--btn-radius);
+  font-size: var(--fs-step-0);
+  font-weight: var(--weight-medium);
+  line-height: var(--lh-snug);
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--dur-2) var(--ease-out-quart),
+    border-color var(--dur-2) var(--ease-out-quart),
+    transform var(--dur-1) var(--ease-out-quart),
+    box-shadow var(--dur-2) var(--ease-out-quart);
+  box-shadow: var(--_shadow);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--_bg-hover);
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Variants */
+.accent {
+  --_bg: var(--btn-accent-bg);
+  --_fg: var(--btn-accent-fg);
+  --_bg-hover: var(--btn-accent-bg-hover);
+  --_border: var(--btn-accent-bg);
+  --_shadow: var(--shadow-1);
+}
+
+.accent:hover:not(:disabled) {
+  --_shadow: var(--shadow-accent-glow);
+}
+
+.secondary {
+  --_bg: var(--surface-2);
+  --_fg: var(--text-primary);
+  --_bg-hover: var(--surface-3);
+  --_border: var(--border-subtle);
+}
+
+.ghost {
+  --_bg: transparent;
+  --_fg: var(--text-secondary);
+  --_bg-hover: var(--surface-2);
+  --_border: transparent;
+}
+
+.danger {
+  --_bg: var(--danger);
+  --_fg: var(--neutral-50);
+  --_bg-hover: var(--red-400);
+  --_border: var(--danger);
+  --_shadow: var(--shadow-1);
+}
+
+.danger:hover:not(:disabled) {
+  --_shadow: var(--shadow-danger-glow);
+}
+
+/* Sizes */
+.sm {
+  min-height: 34px;
+  padding: calc(var(--space-1) + 2px) var(--space-3);
+  font-size: var(--fs-step--1);
+}
+
+.md {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+}
+
+.lg {
+  min-height: 52px;
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--fs-step-1);
+}
+
+/* Loading state */
+.spinner {
+  position: absolute;
+  font-size: 1.2em;
+  animation: spin 1s linear infinite;
+}
+
+.labelLoading {
+  opacity: 0;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

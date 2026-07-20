@@ -1,0 +1,40 @@
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-inset) 0%,
+    var(--surface-2) 50%,
+    var(--surface-inset) 100%
+  );
+  background-size: 200% 100%;
+  animation: pulse 1.5s ease-in-out infinite;
+  border-radius: var(--radius-xs);
+}
+
+.text {
+  height: 1em;
+  border-radius: var(--radius-xs);
+}
+
+.circular {
+  border-radius: var(--radius-full);
+}
+
+.rectangular {
+  border-radius: var(--radius-sm);
+}
+
+@keyframes pulse {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background: var(--surface-inset);
+  }
+}

@@ -1,0 +1,133 @@
+.viewport {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  max-width: 420px;
+  width: 100%;
+  z-index: var(--z-toast);
+  pointer-events: none;
+}
+
+.root {
+  --_bg: var(--surface-2);
+  --_border: var(--border-subtle);
+  --_fg: var(--text-primary);
+
+  position: relative;
+  background: var(--_bg);
+  border: 1px solid var(--_border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-3);
+  pointer-events: auto;
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
+}
+
+.root[data-state="open"] {
+  animation: slideIn var(--dur-3) var(--ease-out-expo);
+}
+
+.root[data-state="closed"] {
+  animation: slideOut var(--dur-2) var(--ease-out-quart);
+}
+
+.root[data-swipe="move"] {
+  transform: translateX(var(--radix-toast-swipe-move-x));
+}
+
+.root[data-swipe="cancel"] {
+  transform: translateX(0);
+  transition: transform var(--dur-2) var(--ease-out-quart);
+}
+
+.root[data-swipe="end"] {
+  animation: swipeOut var(--dur-2) var(--ease-out-quart);
+}
+
+.success {
+  --_border: var(--success);
+  --_bg: var(--success-muted);
+}
+
+.error {
+  --_border: var(--danger);
+  --_bg: var(--danger-muted);
+}
+
+.info {
+  --_border: var(--accent);
+  --_bg: var(--accent-muted);
+}
+
+.title {
+  color: var(--_fg);
+  font-size: var(--fs-step-0);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-snug);
+  margin: 0;
+}
+
+.description {
+  color: var(--text-secondary);
+  font-size: var(--fs-step--1);
+  line-height: var(--lh-normal);
+  margin-top: var(--space-1);
+}
+
+.close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: var(--radius-xs);
+  transition: var(--transition-colors);
+}
+
+.close:hover {
+  color: var(--text-primary);
+  background: var(--surface-inset);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(calc(100% + var(--space-6)));
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOut {
+  to {
+    transform: translateX(calc(100% + var(--space-6)));
+  }
+}
+
+@keyframes swipeOut {
+  to {
+    transform: translateX(calc(100% + var(--space-6)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root[data-state="open"],
+  .root[data-state="closed"],
+  .root[data-swipe="end"] {
+    animation: none;
+  }
+}
