@@ -77,7 +77,19 @@ Full threat model: `docs/THREAT-MODEL.md` (Phase 8).
 - Local Hardhat for unit tests
 - **ETH Sepolia** for hackathon product path
 
-## 8. Open questions (resolve in Phase 2–4)
+## 8. Phase 0 deliverables (complete)
+
+✅ Monorepo structure with pnpm workspaces  
+✅ Next.js app with Noviq design system (tokens, motion, patterns)  
+✅ Three fonts configured: Space Grotesk (display), Geist (sans), Geist Mono (mono)  
+✅ MotionProvider with `reducedMotion="user"` accessibility  
+✅ Hardhat + TypeScript contract setup (compiles NoxageHello.sol)  
+✅ .env.example with Sepolia, WalletConnect, Nox endpoint vars  
+✅ Mesh + grain background rendering on landing page  
+✅ No-FOUC theme script in layout  
+✅ All dependencies installed and builds verified  
+
+## 9. Open questions (resolve in Phase 2–4)
 
 - Exact Nox handle SDK / runner API surface on Sepolia
 - Preferred ERC-7984 wrapper pattern from Nox wizard
