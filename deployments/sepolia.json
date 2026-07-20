@@ -1,0 +1,17 @@
+{
+  "chainId": 11155111,
+  "network": "sepolia",
+  "note": "Addresses populated after Phase 2+ deploys. Phase 0 has no product contracts on-chain.",
+  "contracts": {
+    "NoxageHello": null,
+    "NoxageVault": null,
+    "NoxageIntentBook": null,
+    "NoxageEpochManager": null,
+    "NoxageSettlementExecutor": null,
+    "NoxageFillLedger": null,
+    "MockUSDC": null,
+    "MockWETH": null,
+    "UniswapV3SwapRouter": null
+  },
+  "updatedAt": null
+}

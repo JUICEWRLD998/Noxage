@@ -1,0 +1,46 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build / Next
+.next
+out
+dist
+build
+coverage
+
+# Env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Hardhat
+packages/contracts/cache
+packages/contracts/artifacts
+packages/contracts/typechain-types
+packages/contracts/coverage
+packages/contracts/coverage.json
+packages/contracts/gas-report.txt
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# Logs / debug
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Misc
+.turbo
+*.pem

@@ -1,0 +1,19 @@
+{
+  "name": "noxage",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Noxage — public liquidity, private strategy. Confidential intent settlement on iExec Nox.",
+  "scripts": {
+    "dev": "pnpm --filter @noxage/web dev",
+    "build": "pnpm --filter @noxage/web build",
+    "start": "pnpm --filter @noxage/web start",
+    "lint": "pnpm --filter @noxage/web lint",
+    "contracts:compile": "pnpm --filter @noxage/contracts compile",
+    "contracts:test": "pnpm --filter @noxage/contracts test",
+    "contracts:node": "pnpm --filter @noxage/contracts node"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.33.3"
+}
