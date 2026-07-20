@@ -1,44 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import styles from "./ThemeToggle.module.css";
 
 type Theme = "dark" | "light";
 
-export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("dark");
-  const [mounted, setMounted] = useState(false);
+// External store: the source of truth is the DOM (`<html data-theme>`), set by
+// the no-FOUC script before hydration. Toggling updates the DOM and notifies
+// subscribers, so no setState-in-effect is needed.
+const listeners = new Set<() => void>();
 
-  useEffect(() => {
-    setMounted(true);
-    const stored = localStorage.getItem("app-theme") as Theme | null;
-    if (stored === "light" || stored === "dark") {
-      setTheme(stored);
-    }
-  }, []);
+function subscribe(onChange: () => void) {
+  listeners.add(onChange);
+  return () => {
+    listeners.delete(onChange);
+  };
+}
+
+function getThemeSnapshot(): Theme {
+  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
+}
+
+function getServerSnapshot(): Theme {
+  return "dark";
+}
+
+function setTheme(next: Theme) {
+  if (next === "light") {
+    document.documentElement.dataset.theme = "light";
+  } else {
+    delete document.documentElement.dataset.theme;
+  }
+  try {
+    localStorage.setItem("app-theme", next);
+  } catch {
+    // ignore storage failures (private mode, etc.)
+  }
+  listeners.forEach((l) => l());
+}
+
+export function ThemeToggle() {
+  const theme = useSyncExternalStore(subscribe, getThemeSnapshot, getServerSnapshot);
 
   const toggleTheme = () => {
-    const newTheme: Theme = theme === "dark" ? "light" : "dark";
-    setTheme(newTheme);
-    localStorage.setItem("app-theme", newTheme);
-    
-    if (newTheme === "light") {
-      document.documentElement.dataset.theme = "light";
-    } else {
-      delete document.documentElement.dataset.theme;
-    }
+    setTheme(theme === "dark" ? "light" : "dark");
   };
-
-  // Prevent flash during SSR
-  if (!mounted) {
-    return (
-      <button className={styles.toggle} aria-label="Toggle theme" disabled>
-        <span className={styles.icon} aria-hidden="true">
-          ○
-        </span>
-      </button>
-    );
-  }
 
   return (
     <button

@@ -1,0 +1,148 @@
+.page {
+  position: relative;
+  min-height: 100dvh;
+  isolation: isolate;
+}
+
+.container {
+  position: relative;
+  z-index: var(--z-raised);
+  padding-block: var(--space-8);
+}
+
+.header {
+  margin-bottom: var(--space-8);
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: var(--fs-step-3);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.subsectionTitle {
+  font-size: var(--fs-step-1);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+}
+
+/* Colors */
+.colorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+  gap: var(--space-3);
+}
+
+.colorSwatch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.colorBox {
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.colorLabel {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.semanticCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.semanticSwatch {
+  width: 100%;
+  height: 4rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.semanticLabel {
+  font-size: var(--fs-step--1);
+  color: var(--text-secondary);
+}
+
+/* Typography */
+.fontSample {
+  font-size: var(--fs-step-2);
+  color: var(--text-primary);
+}
+
+/* Spacing */
+.spacingRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.spacingLabel {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+  width: 8rem;
+  flex-shrink: 0;
+}
+
+.spacingBar {
+  height: 1rem;
+  background: var(--accent);
+  border-radius: var(--radius-xs);
+}
+
+/* Patterns */
+.patternTitle {
+  font-size: var(--fs-step-0);
+  font-weight: var(--weight-medium);
+  margin-bottom: var(--space-2);
+}
+
+.patternDemo {
+  position: relative;
+  min-height: 8rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.patternOverlay {
+  position: relative;
+  z-index: var(--z-raised);
+  text-align: center;
+  color: var(--text-primary);
+}
+
+/* Layout demo */
+.demoBox {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* Footer */
+.footer {
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border-subtle);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--fs-step--1);
+}
+
+.footerMuted {
+  color: var(--text-faint);
+  margin-top: var(--space-2);
+}

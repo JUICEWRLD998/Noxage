@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { useId, type ComponentPropsWithoutRef } from "react";
 import styles from "./Field.module.css";
 
 interface FieldProps extends ComponentPropsWithoutRef<"input"> {
@@ -17,7 +17,8 @@ export function Field({
   className = "",
   ...props
 }: FieldProps) {
-  const fieldId = id || `field-${Math.random().toString(36).slice(2, 9)}`;
+  const generatedId = useId();
+  const fieldId = id || generatedId;
   const helperId = helper ? `${fieldId}-helper` : undefined;
   const errorId = error ? `${fieldId}-error` : undefined;
 
