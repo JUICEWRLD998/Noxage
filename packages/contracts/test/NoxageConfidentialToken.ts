@@ -70,8 +70,9 @@ describe("NoxageConfidentialToken", () => {
       expect(await underlying.balanceOf(tokenAddr)).to.equal(amount);
       expect(await underlying.balanceOf(aliceAddr)).to.equal(900n * ONE);
 
-      // Confidential balance credited (wrapper scales by rate; rate == 1 here).
-      expect(await balanceOf(alice)).to.equal(100n);
+      // Confidential balance credited. rate() == 1 here (underlying decimals 6
+      // == wrapper max decimals 6), so confidential units == underlying raw units.
+      expect(await balanceOf(alice)).to.equal(100n * ONE);
     });
 
     it("stores the balance as a ciphertext handle, not plaintext", async () => {
@@ -98,7 +99,7 @@ describe("NoxageConfidentialToken", () => {
       // Encrypt the transfer amount client-side, bound to (contract, sender).
       const enc = await fhevm
         .createEncryptedInput(tokenAddr, aliceAddr)
-        .add64(30n)
+        .add64(30n * ONE)
         .encrypt();
 
       await (
@@ -111,8 +112,8 @@ describe("NoxageConfidentialToken", () => {
           )
       ).wait();
 
-      expect(await balanceOf(alice)).to.equal(70n);
-      expect(await balanceOf(bob)).to.equal(30n);
+      expect(await balanceOf(alice)).to.equal(70n * ONE);
+      expect(await balanceOf(bob)).to.equal(30n * ONE);
     });
   });
 
@@ -125,7 +126,7 @@ describe("NoxageConfidentialToken", () => {
       // Step 1: request unwrap of 40 confidential tokens (handle overload).
       const enc = await fhevm
         .createEncryptedInput(tokenAddr, aliceAddr)
-        .add64(40n)
+        .add64(40n * ONE)
         .encrypt();
 
       const reqTx = await token
@@ -152,7 +153,7 @@ describe("NoxageConfidentialToken", () => {
       const requestId: string = parsed!.args.unwrapRequestId;
 
       // Confidential balance already reduced by the burn.
-      expect(await balanceOf(alice)).to.equal(60n);
+      expect(await balanceOf(alice)).to.equal(60n * ONE);
 
       // Step 2: the amount handle is made publicly decryptable; obtain the
       // KMS-signed cleartext + proof and finalize (mirrors the Sepolia oracle).
@@ -160,7 +161,7 @@ describe("NoxageConfidentialToken", () => {
         requestId,
       ]);
       const cleartext = BigInt(clearValues[requestId] as bigint);
-      expect(cleartext).to.equal(40n);
+      expect(cleartext).to.equal(40n * ONE);
 
       await (
         await token.finalizeUnwrap(requestId, cleartext, decryptionProof)
@@ -188,7 +189,7 @@ describe("NoxageConfidentialToken", () => {
       // observer ACL access to the new handle.
       const enc = await fhevm
         .createEncryptedInput(tokenAddr, aliceAddr)
-        .add64(10n)
+        .add64(10n * ONE)
         .encrypt();
       await (
         await token
@@ -208,7 +209,7 @@ describe("NoxageConfidentialToken", () => {
         tokenAddr,
         auditor,
       );
-      expect(seenByAuditor).to.equal(40n);
+      expect(seenByAuditor).to.equal(40n * ONE);
     });
 
     it("lets the owner revoke the auditor", async () => {
