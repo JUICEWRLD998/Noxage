@@ -8,6 +8,7 @@
     "test": "hardhat test",
     "node": "hardhat node",
     "deploy:sepolia": "hardhat run scripts/deploy-confidential.ts --network sepolia",
+    "deploy:intents:sepolia": "hardhat run scripts/deploy-intents.ts --network sepolia",
     "clean": "hardhat clean"
   },
   "devDependencies": {

@@ -58,6 +58,26 @@ confidential-*balance* layer — the two are complementary, not alternatives.
 
 **Deployment:** `pnpm deploy:sepolia` → addresses in `deployments/sepolia.json`.
 
+**Encrypted external inputs (Phase 3 — intent book):**
+
+- User-supplied ciphertext arrives as `externalEuint8` / `externalEuint64`
+  (from `encrypted-types`, re-exported by `@fhevm/solidity/lib/FHE.sol`) plus a
+  single `bytes inputProof`; `FHE.fromExternal(handle, proof)` verifies and
+  converts each into an in-contract handle. One proof can cover several handles
+  packed in the same client-side `createEncryptedInput(...).encrypt()`.
+- ACL is not automatic on `fromExternal`: you must `FHE.allowThis(handle)` for the
+  contract and `FHE.allow(handle, user)` for the submitter, or nobody can decrypt
+  later. Easy to forget — the mock's `userDecryptEuint` surfaces it immediately.
+- The mock's `createEncryptedInput` binds ciphertext to `(contractAddress, userAddress)`,
+  so the encrypting signer must match `msg.sender` on submit — a good forcing
+  function that mirrors Sepolia.
+- Keeping `pair` and `deadline` public (only size/side/limit encrypted) kept the
+  contract simple and matches the honest privacy claim (residual pair is visible
+  anyway). No gas surprises — intent submit is dominated by the FHE verify.
+
+**Phase 3 deployment:** `pnpm deploy:intents:sepolia` (epoch manager + intent
+book, auto-wired) → merged into `deployments/sepolia.json`.
+
 ---
 
 ## 3. TEE / confidential compute (netting)

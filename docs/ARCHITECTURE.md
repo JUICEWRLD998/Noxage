@@ -51,8 +51,8 @@ User / auditor decrypt
 | ~~`NoxageHello`~~ | 0 | Compile sanity — **removed in Phase 2** |
 | `MockERC20` | 2 | Public ERC-20 faucet stand-in (ERC-1363) for Sepolia |
 | `NoxageConfidentialToken` | 2 | Shield / unshield + ACL (ERC-7984 wrapper) ✅ |
-| `NoxageIntentBook` | 3 | Encrypted intents |
-| `NoxageEpochManager` | 3 | Epoch lifecycle |
+| `NoxageEpochManager` | 3 | Epoch lifecycle + status machine ✅ |
+| `NoxageIntentBook` | 3 | Encrypted intent handles + cancel ✅ |
 | Netting compute path | 4 | TEE netting (iExec Nox) |
 | `NoxageSettlementExecutor` | 4 | Uniswap residual call |
 | `NoxageFillLedger` | 4 | Encrypted fills + ACL |
@@ -72,6 +72,24 @@ layers on Zama's FHEVM coprocessor (live on Sepolia):
 
 One wrapper is deployed per underlying (confidential mUSDC, confidential mWETH).
 The `euint64` datatype caps confidential supply at `type(uint64).max`.
+
+### Intent + epoch layer (Phase 3)
+
+Users seal encrypted trade intents into batching epochs before the TEE nets them:
+
+- **`NoxageEpochManager`** — owns the epoch state machine
+  (`None → Open → Closed → Settled | Failed`). At most one epoch is `Open` at a
+  time. The owner (later the TEE coordinator) opens/closes/settles; anyone may
+  close an epoch once its duration elapses, so the cadence survives an idle
+  operator. Stores only a per-epoch intent counter and an opaque `settlementRef`
+  — never trade data.
+- **`NoxageIntentBook`** — accepts intents whose sensitive fields are FHE
+  ciphertext handles verified via `FHE.fromExternal`: `side` (euint8 direction),
+  `amount` (euint64 size), `limit` (euint64 price, 0 = none). The `pair` and
+  `deadline` are public by design. Each handle is ACL-granted to the submitter
+  and the book (`allow`/`allowThis`); the Phase 4 TEE path is added when wired.
+  Intents bind to the currently open epoch and can be cancelled only while it
+  stays open. Events (`IntentSubmitted`, `Epoch*`) carry no plaintext amounts.
 
 ## 5. Privacy model (honest)
 
