@@ -28,9 +28,35 @@ _Phase 0: not yet integrated. Placeholder for Phase 2 feedback._
 
 _Shield, unshield, transfers, ACL, events, gas, DX._
 
-**Notes:**
+**Stack (Phase 2):** OpenZeppelin `@openzeppelin/confidential-contracts@0.5.1` (ERC-7984)
+on top of Zama FHEVM (`@fhevm/solidity@0.11.1`, `@fhevm/hardhat-plugin@0.4.2`),
+against the live FHEVM coprocessor on Ethereum Sepolia. iExec Nox TEE is the
+Phase 4 confidential-*compute* layer (netting runner); ERC-7984 is the on-chain
+confidential-*balance* layer — the two are complementary, not alternatives.
 
-_(fill in Phase 2)_
+**What worked well:**
+
+- `ERC7984ERC20Wrapper` is a drop-in shield/unshield primitive — wrap is
+  synchronous, unwrap is an honest two-step (request → oracle decrypt →
+  `finalizeUnwrap`) that mirrors the real KMS flow.
+- `ERC7984ObserverAccess` gives selective disclosure (auditor read access) for
+  free — exactly the ACL grant/revoke we needed.
+- `ZamaEthereumConfig` auto-selects coprocessor addresses by `block.chainid`
+  (mainnet / Sepolia / local 31337), so no hardcoded addresses in our contracts.
+- The `@fhevm/hardhat-plugin` mock reproduces encryption, ACL, and KMS-signed
+  public decryption in-process — all 7 shield/unshield/transfer/ACL tests run
+  locally with the same code paths that hit Sepolia.
+
+**Friction / gotchas:**
+
+- FHEVM requires `evmVersion: "cancun"`; the plugin's config extender is a no-op,
+  so this must be set manually in `hardhat.config.ts` or compilation fails.
+- Wrapper `rate()` depends on underlying decimals vs `_maxDecimals()` (default 6):
+  a 6-decimal token has rate 1, so confidential balances are in raw underlying
+  units, not whole tokens. Worth documenting for UI amount formatting.
+- Package is `@fhevm/hardhat-plugin`, not `@fhevm/hardhat` (which 404s on npm).
+
+**Deployment:** `pnpm deploy:sepolia` → addresses in `deployments/sepolia.json`.
 
 ---
 

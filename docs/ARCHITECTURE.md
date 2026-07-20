@@ -48,13 +48,30 @@ User / auditor decrypt
 
 | Contract | Phase | Responsibility |
 |---|---|---|
-| `NoxageHello` | 0 | Compile sanity only — remove/supersede later |
-| Vault / ERC-7984 wrappers | 2 | Shield / unshield |
+| ~~`NoxageHello`~~ | 0 | Compile sanity — **removed in Phase 2** |
+| `MockERC20` | 2 | Public ERC-20 faucet stand-in (ERC-1363) for Sepolia |
+| `NoxageConfidentialToken` | 2 | Shield / unshield + ACL (ERC-7984 wrapper) ✅ |
 | `NoxageIntentBook` | 3 | Encrypted intents |
 | `NoxageEpochManager` | 3 | Epoch lifecycle |
-| Netting compute path | 4 | TEE netting |
+| Netting compute path | 4 | TEE netting (iExec Nox) |
 | `NoxageSettlementExecutor` | 4 | Uniswap residual call |
 | `NoxageFillLedger` | 4 | Encrypted fills + ACL |
+
+### Confidential-balance stack (Phase 2)
+
+`NoxageConfidentialToken` composes three audited OpenZeppelin confidential-contract
+layers on Zama's FHEVM coprocessor (live on Sepolia):
+
+- **`ERC7984ERC20Wrapper`** — `wrap()` shields a public ERC-20 into an encrypted
+  `euint64` balance; `unwrap()` → `finalizeUnwrap()` unshields via a two-step
+  oracle-decrypt flow. On-chain state is ciphertext handles only.
+- **`ERC7984ObserverAccess`** — `setObserver()` grants one auditor permanent FHE
+  ACL read access to an account's balance/transfers (selective disclosure).
+- **`ZamaEthereumConfig`** — wires ACL / Coprocessor / KMSVerifier addresses by
+  `block.chainid`.
+
+One wrapper is deployed per underlying (confidential mUSDC, confidential mWETH).
+The `euint64` datatype caps confidential supply at `type(uint64).max`.
 
 ## 5. Privacy model (honest)
 
