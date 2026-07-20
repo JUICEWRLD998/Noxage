@@ -1,5 +1,6 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
+import "@fhevm/hardhat-plugin";
 import * as dotenv from "dotenv";
 
 dotenv.config({ path: "../../.env" });
@@ -15,6 +16,8 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 200,
       },
+      // FHEVM requires the cancun EVM (TLOAD/TSTORE used by the coprocessor libs).
+      evmVersion: "cancun",
     },
   },
   paths: {
@@ -31,8 +34,6 @@ const config: HardhatUserConfig = {
       chainId: 11155111,
     },
   },
-  // Nox Hardhat plugin will be wired in Phase 2 when confidential contracts land.
-  // See: https://github.com/iExec-Nox/nox-hardhat-plugin
 };
 
 export default config;
