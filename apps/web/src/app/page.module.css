@@ -99,6 +99,7 @@
   text-decoration: none;
 }
 
+.footer {
   position: relative;
   z-index: var(--z-raised);
   padding: var(--space-4);

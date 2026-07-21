@@ -1,33 +1,16 @@
-import { createConfig, http } from "wagmi";
+import { createConfig, http, injected } from "wagmi";
 import { sepolia } from "wagmi/chains";
-import { injected, walletConnect } from "wagmi/connectors";
 
 const rpcUrl =
   process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ??
   "https://ethereum-sepolia-rpc.publicnode.com";
 
-const walletConnectProjectId =
-  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "";
-
-// Injected is always available; WalletConnect only when a project id is set.
-const connectors = [
-  injected({ shimDisconnect: true }),
-  ...(walletConnectProjectId
-    ? [
-        walletConnect({
-          projectId: walletConnectProjectId,
-          showQrModal: true,
-          metadata: {
-            name: "Noxage",
-            description:
-              "Confidential intent settlement for open DeFi — public liquidity, private strategy.",
-            url: "https://noxage.app",
-            icons: [],
-          },
-        }),
-      ]
-    : []),
-];
+// Injected only (MetaMask / Rabby / Brave via the browser extension). `injected`
+// is re-exported from the `wagmi` entrypoint, so we avoid the `wagmi/connectors`
+// barrel — that barrel also pulls in the Base Account connector, whose
+// @coinbase/cdp-sdk dependency statically imports optional, uninstalled `@x402/*`
+// packages that break the production build (webpack errors / Turbopack hangs).
+const connectors = [injected({ shimDisconnect: true })];
 
 export const wagmiConfig = createConfig({
   chains: [sepolia],
