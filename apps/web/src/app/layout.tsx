@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
 import { MotionProvider } from "@/components/providers/MotionProvider";
+import { Web3Provider } from "@/components/providers/Web3Provider";
 import "@/styles/globals.css";
 
 const spaceGrotesk = Space_Grotesk({
