@@ -53,7 +53,9 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: noFoucThemeScript }} />
       </head>
       <body>
-        <MotionProvider>{children}</MotionProvider>
+        <Web3Provider>
+          <MotionProvider>{children}</MotionProvider>
+        </Web3Provider>
       </body>
     </html>
   );
