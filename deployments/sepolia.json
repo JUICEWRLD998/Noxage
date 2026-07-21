@@ -1,7 +1,7 @@
 {
   "chainId": 11155111,
   "network": "sepolia",
-  "note": "Phase 2: confidential balance rail (mock underlyings + ERC-7984 wrappers) via `pnpm deploy:sepolia`. Phase 3: intent book + epoch manager via `pnpm deploy:intents:sepolia`. Settlement/fill-ledger land in Phase 4.",
+  "note": "Phase 2: confidential balances via `pnpm deploy:sepolia`. Phase 3: intent book + epoch manager via `pnpm deploy:intents:sepolia`. Phase 4: fill ledger + settlement engine via `pnpm --filter @noxage/contracts deploy:settlement:sepolia` (addresses null until that script is run).",
   "contracts": {
     "MockUSDC": "0x2745eaFb07Aee70e8c8122c58995AA38FC3bb71D",
     "NoxageConfidentialUSDC": "0x15caB567a82cfF81B21d8d5d00eEEb4088e9F0a7",
@@ -9,9 +9,10 @@
     "NoxageConfidentialWETH": "0x5D228c8976178725a723C14A6BD6Fa5Bc35004Cb",
     "NoxageIntentBook": "0xb8E8768bC8661C82bc25f5eD77F4a317777DAeF4",
     "NoxageEpochManager": "0xE3fD733dB7afeBD43e3057971BeeD50BBcE38089",
+    "NoxageSettlementEngine": null,
     "NoxageSettlementExecutor": null,
     "NoxageFillLedger": null,
-    "UniswapV3SwapRouter": null
+    "UniswapV3SwapRouter": "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E"
   },
   "updatedAt": "2026-07-20T21:22:36.734Z"
 }

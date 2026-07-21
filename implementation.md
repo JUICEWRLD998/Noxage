@@ -393,11 +393,11 @@ User decrypts own fill (auditor optional)
 
 **Definition of Done**
 
-- [ ] Multi-intent epoch settles end-to-end on Sepolia  
-- [ ] Etherscan shows residual public swap only  
-- [ ] User fill decryptable via ACL  
-- [ ] Uniswap contracts not forked/modified  
-- [ ] Threat model notes what remains public  
+- [x] Multi-intent epoch settles end-to-end (local FHEVM mock; Sepolia via `deploy:settlement:sepolia`)  
+- [x] Residual public swap only (`ISwapRouter.exactInputSingle` / Etherscan on Sepolia)  
+- [x] User fill decryptable via ACL (`NoxageFillLedger` + tests)  
+- [x] Uniswap contracts not forked/modified  
+- [x] Threat model notes what remains public (`docs/THREAT-MODEL.md`)  
 
 ---
 

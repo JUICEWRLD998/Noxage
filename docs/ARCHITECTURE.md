@@ -17,18 +17,15 @@ Public protocols are never forked. Composability is preserved at settlement.
 
 ```
 Wallet
-  │ encrypt intent (Nox handle SDK)
+  │ encrypt intent (FHEVM input proof)
   ▼
 NoxageIntentBook          ← confidential inputs (handles)
   │ epoch close
   ▼
-Nox Runner (TEE)          ← decrypt · net · plan residual + fills
-  │
+NoxageSettlementEngine    ← homomorphic net (FHE) · residual reveal
+  │ publicDecrypt residual only
   ▼
-NoxageSettlementExecutor  ← residual only
-  │
-  ▼
-Uniswap v3 Router         ← unmodified public protocol
+Uniswap v3 Router         ← unmodified public protocol (residual only)
   │
   ▼
 NoxageFillLedger          ← encrypted fills + ACL
@@ -53,9 +50,9 @@ User / auditor decrypt
 | `NoxageConfidentialToken` | 2 | Shield / unshield + ACL (ERC-7984 wrapper) ✅ |
 | `NoxageEpochManager` | 3 | Epoch lifecycle + status machine ✅ |
 | `NoxageIntentBook` | 3 | Encrypted intent handles + cancel ✅ |
-| Netting compute path | 4 | TEE netting (iExec Nox) |
-| `NoxageSettlementExecutor` | 4 | Uniswap residual call |
-| `NoxageFillLedger` | 4 | Encrypted fills + ACL |
+| `NoxageSettlementEngine` | 4 | Homomorphic net + residual Uniswap + fills ✅ |
+| `NoxageFillLedger` | 4 | Encrypted fills + ACL ✅ |
+| `ISwapRouter` / `MockSwapRouter` | 4 | Unmodified Uniswap v3 interface + local mock ✅ |
 
 ### Confidential-balance stack (Phase 2)
 
@@ -87,17 +84,32 @@ Users seal encrypted trade intents into batching epochs before the TEE nets them
   ciphertext handles verified via `FHE.fromExternal`: `side` (euint8 direction),
   `amount` (euint64 size), `limit` (euint64 price, 0 = none). The `pair` and
   `deadline` are public by design. Each handle is ACL-granted to the submitter
-  and the book (`allow`/`allowThis`); the Phase 4 TEE path is added when wired.
+  and the book (`allow`/`allowThis`); the settlement engine is granted ACL when
+  wired so it can net without learning plaintext sizes.
   Intents bind to the currently open epoch and can be cancelled only while it
   stays open. Events (`IntentSubmitted`, `Epoch*`) carry no plaintext amounts.
+
+### Settlement + fills (Phase 4)
+
+- **`NoxageSettlementEngine`** — two-step settle for a closed epoch:
+  1. `prepareSettlement` — homomorphic buy/sell totals, residual
+     `|buy − sell|` + direction made publicly decryptable (only those aggregates).
+  2. `finalizeSettlement` — KMS-verify residual, swap **residual only** on
+     unmodified Uniswap v3 `exactInputSingle`, credit encrypted fills, mark
+     epoch `Settled`. Residual swap revert → epoch `Failed`, no fills.
+- **`NoxageFillLedger`** — four encrypted legs per intent (`recvBase`,
+  `recvQuote`, `payBase`, `payQuote`); owner ACL for selective disclosure.
+- **Netting rule (MVP):** full-size fills at a public clearing price; engine
+  inventory covers netted notional; Uniswap sees residual only. See
+  `docs/THREAT-MODEL.md`.
 
 ## 5. Privacy model (honest)
 
 **Private:** intent amounts, per-user fills until authorized decrypt, direction within multi-user netting.
 
-**Public:** residual Uniswap (or Aave stretch) settlement, that a batch occurred, residual pair when residual ≠ 0.
+**Public:** residual Uniswap (or Aave stretch) settlement, that a batch occurred, residual pair when residual ≠ 0, clearing price, engine inventory balances.
 
-Full threat model: `docs/THREAT-MODEL.md` (Phase 8).
+Full threat model: `docs/THREAT-MODEL.md`.
 
 ## 6. Frontend IA
 

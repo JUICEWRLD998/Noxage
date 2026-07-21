@@ -16,6 +16,8 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 200,
       },
+      // FHEVM contracts blow the stack without IR (many euint locals + ACL grants).
+      viaIR: true,
       // FHEVM requires the cancun EVM (TLOAD/TSTORE used by the coprocessor libs).
       evmVersion: "cancun",
     },

@@ -84,9 +84,41 @@ book, auto-wired) → merged into `deployments/sepolia.json`.
 
 _Runner, gateway, encryption SDK, latency, failure modes._
 
-**Notes:**
+**Phase 4 approach:** on-chain **FHEVM homomorphic netting** inside
+`NoxageSettlementEngine.prepareSettlement` — not a separate iExec Nox TEE
+runner for the residual figure. Intent handles stay encrypted; only
+`|buy − sell|` + a direction bit are made publicly decryptable via
+`FHE.makePubliclyDecryptable` + KMS-signed `publicDecrypt` (same pattern as
+ERC-7984 unwrap finalize).
 
-_(fill in Phase 4)_
+**What worked well:**
+
+- Homomorphic `FHE.select` / `FHE.add` / `FHE.sub` / `FHE.gt` let us net a
+  whole epoch without ever decrypting individual sizes. The engine learns only
+  the residual the KMS reveals — strong fit for the “privacy membrane” claim.
+- Reusing the shield/unshield public-decrypt path (`publicDecrypt` →
+  `FHE.checkSignatures`) kept the residual reveal honest and testable under
+  `@fhevm/hardhat-plugin` mock with the same APIs as Sepolia.
+- Granting the settlement engine FHE ACL on submit (`FHE.allow(handle, engine)`)
+  from the intent book was the right wiring point; without it, prepare reverts
+  deep in the coprocessor with opaque ACL errors.
+
+**Friction / gotchas:**
+
+- We originally planned an iExec Nox TEE runner for netting. FHEVM on-chain
+  netting covered the MVP residual + fill path without introducing a second
+  compute stack mid-hackathon. TEE remains attractive for **limit enforcement**,
+  multi-pair planning, and richer fill math — not required for residual size.
+- `NoxageEpochManager.markSettled` / `markFailed` were `onlyOwner`; the engine
+  is a separate contract, so finalize always failed until we added a
+  `settlementEngine` authority. Easy to miss when composing Ownable modules.
+- Gas: prepare loops every intent with several FHE ops. Fine for demo-sized
+  batches (≤ tens of intents); not production-scale without batching limits.
+- `FHE.div` is ciphertext ÷ plaintext only — clearing price stays public
+  (`priceNum/priceDen`), which matches the honest threat model.
+
+**Deploy:** `pnpm --filter @noxage/contracts deploy:settlement:sepolia`
+→ fill ledger + settlement engine, wired into book + epoch manager.
 
 ---
 
@@ -96,8 +128,19 @@ _Calling Uniswap (or other) from a Nox-adjacent settlement path without breaking
 
 **Notes:**
 
-_(fill in Phase 4)_
-
+- Residual path calls the **unmodified** Uniswap v3 `SwapRouter.exactInputSingle`
+  via a minimal `ISwapRouter` interface. No fork, no callback customisation.
+- Local tests use `MockSwapRouter` (fixed price, pre-funded). Sepolia uses the
+  canonical SwapRouter (`0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E`).
+- Engine holds public ERC-20 **inventory** (working capital). Residual swaps
+  pull from inventory; netted notional never touches Uniswap. Inventory balances
+  are public — documented in `docs/THREAT-MODEL.md`.
+- Failure path: residual swap `try/catch` → epoch `Failed`, no fills credited,
+  approval zeroed. Safe fund handling for the residual leg; user confidential
+  balances are not auto-refunded in MVP (operator recovery).
+- Privacy boundary is clean: Uniswap sees only residual `amountIn` / tokens /
+  fee. Individual intent sizes never appear in the residual calldata when the
+  batch has opposing flow.
 ---
 
 ## 5. Frontend / SDK DX

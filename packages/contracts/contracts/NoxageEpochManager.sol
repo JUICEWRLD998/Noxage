@@ -8,9 +8,9 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  * @notice Owns the epoch lifecycle for Noxage's confidential intent batching.
  *
  * Users seal encrypted intents (in {NoxageIntentBook}) into whichever epoch is
- * currently open. An operator (owner — later the TEE settlement coordinator)
- * opens and closes epochs; once closed, an epoch is sealed for off-chain TEE
- * netting and can only move to `Settled` or `Failed`.
+ * currently open. An operator (owner) opens and closes epochs; once closed, an
+ * epoch is sealed for settlement-engine netting and can only move to `Settled`
+ * or `Failed`.
  *
  * No plaintext trade data ever touches this contract — it tracks only the epoch
  * state machine and an intent counter for UI/indexing. Encrypted intent handles
@@ -25,7 +25,7 @@ contract NoxageEpochManager is Ownable {
     enum EpochStatus {
         None, // 0 — never opened (default for unknown ids)
         Open, // 1 — accepting intents
-        Closed, // 2 — sealed; awaiting TEE netting
+        Closed, // 2 — sealed; awaiting settlement netting
         Settled, // 3 — residual executed, fills credited
         Failed // 4 — settlement failed; funds must be refunded/credited
     }
@@ -49,6 +49,11 @@ contract NoxageEpochManager is Ownable {
     /// @notice The intent book allowed to record intents against open epochs.
     address public intentBook;
 
+    /// @notice Settlement engine allowed to mark closed epochs Settled/Failed.
+    ///         Set once when Phase 4 is wired; zero until then (owner can still
+    ///         mark settle/fail manually for recovery).
+    address public settlementEngine;
+
     mapping(uint256 => Epoch) private _epochs;
 
     event EpochOpened(uint256 indexed epochId, uint64 openedAt, uint64 closesAt);
@@ -56,6 +61,7 @@ contract NoxageEpochManager is Ownable {
     event EpochSettled(uint256 indexed epochId, bytes32 settlementRef);
     event EpochFailed(uint256 indexed epochId, bytes32 settlementRef);
     event IntentBookSet(address indexed intentBook);
+    event SettlementEngineSet(address indexed settlementEngine);
     event EpochDurationSet(uint64 epochDuration);
 
     error InvalidEpochDuration();
@@ -65,10 +71,20 @@ contract NoxageEpochManager is Ownable {
     error NotIntentBook();
     error IntentBookNotSet();
     error IntentBookAlreadySet();
+    error SettlementEngineAlreadySet();
+    error NotSettlementAuthority();
     error ZeroAddress();
 
     modifier onlyIntentBook() {
         if (msg.sender != intentBook) revert NotIntentBook();
+        _;
+    }
+
+    /// @dev Owner (ops recovery) or the wired settlement engine may finalize.
+    modifier onlySettlementAuthority() {
+        if (msg.sender != owner() && msg.sender != settlementEngine) {
+            revert NotSettlementAuthority();
+        }
         _;
     }
 
@@ -88,6 +104,16 @@ contract NoxageEpochManager is Ownable {
         if (intentBook != address(0)) revert IntentBookAlreadySet();
         intentBook = intentBook_;
         emit IntentBookSet(intentBook_);
+    }
+
+    /// @notice Wire the settlement engine once so it can mark Settled/Failed.
+    /// @dev Immutable after the first set. Owner retains settle/fail authority
+    ///      for manual recovery if the engine reverts mid-path.
+    function setSettlementEngine(address settlementEngine_) external onlyOwner {
+        if (settlementEngine_ == address(0)) revert ZeroAddress();
+        if (settlementEngine != address(0)) revert SettlementEngineAlreadySet();
+        settlementEngine = settlementEngine_;
+        emit SettlementEngineSet(settlementEngine_);
     }
 
     /// @notice Update the suggested epoch duration (affects future epochs' hints only).
@@ -130,7 +156,7 @@ contract NoxageEpochManager is Ownable {
     }
 
     /**
-     * @notice Close the current open epoch, sealing it for TEE netting.
+     * @notice Close the current open epoch, sealing it for settlement netting.
      * @dev Callable by the owner at any time, or permissionlessly once the
      *      suggested duration has elapsed (keeps the batch cadence honest even
      *      if the operator stalls).
@@ -149,10 +175,12 @@ contract NoxageEpochManager is Ownable {
     }
 
     /**
-     * @notice Mark a closed epoch as settled once the TEE residual has executed.
+     * @notice Mark a closed epoch as settled once residual settlement has executed.
      * @param settlementRef Opaque pointer to the settlement (tx hash / fill root).
+     * @dev Callable by the wired {settlementEngine} (normal path) or the owner
+     *      (ops recovery). Reverts if the epoch is not Closed.
      */
-    function markSettled(uint256 epochId, bytes32 settlementRef) external onlyOwner {
+    function markSettled(uint256 epochId, bytes32 settlementRef) external onlySettlementAuthority {
         Epoch storage epoch = _epochs[epochId];
         if (epoch.status != EpochStatus.Closed) revert EpochNotClosed(epochId);
 
@@ -164,8 +192,9 @@ contract NoxageEpochManager is Ownable {
 
     /**
      * @notice Mark a closed epoch as failed so intents can be refunded/credited.
+     * @dev Same authority model as {markSettled}.
      */
-    function markFailed(uint256 epochId, bytes32 settlementRef) external onlyOwner {
+    function markFailed(uint256 epochId, bytes32 settlementRef) external onlySettlementAuthority {
         Epoch storage epoch = _epochs[epochId];
         if (epoch.status != EpochStatus.Closed) revert EpochNotClosed(epochId);
 

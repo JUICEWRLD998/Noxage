@@ -13,10 +13,10 @@ Noxage is a confidential intent + batch-netting settlement layer for open DeFi. 
 | Phase | Description | State |
 |---|---|---|
 | 0 | Repo bootstrap + design system | ✅ **Complete** |
-| 1 | Design system component kit + `/styleguide` | Pending |
-| 2 | Confidential shield / unshield | Pending |
-| 3 | Intent book + epoch manager | Pending |
-| 4 | Netting + Uniswap residual settlement | Pending |
+| 1 | Design system component kit + `/styleguide` | ✅ **Complete** |
+| 2 | Confidential shield / unshield | ✅ **Complete** |
+| 3 | Intent book + epoch manager | ✅ **Complete** |
+| 4 | Netting + Uniswap residual settlement | ✅ **Complete** |
 | 5–8 | Product UI, landing, docs, demo | Pending |
 
 See [`implementation.md`](./implementation.md) for the full build bible.

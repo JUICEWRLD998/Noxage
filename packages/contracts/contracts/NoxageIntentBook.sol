@@ -22,8 +22,8 @@ import {NoxageEpochManager} from "./NoxageEpochManager.sol";
  * Amounts, directions, and limits never appear in plaintext on-chain or in events.
  *
  * ACL: the submitter and this contract are granted persistent FHE access to each
- * handle. The Phase 4 TEE settlement path is granted access when it is wired,
- * so it can net the batch off-chain without any party learning another's size.
+ * handle. The Phase 4 settlement engine is granted access when it is wired, so
+ * it can homomorphically net the batch without learning any individual size.
  */
 contract NoxageIntentBook is ZamaEthereumConfig {
     NoxageEpochManager public immutable epochManager;
@@ -162,7 +162,7 @@ contract NoxageIntentBook is ZamaEthereumConfig {
 
     /**
      * @notice Cancel an active intent while its epoch is still open.
-     * @dev Once the epoch closes it is sealed for TEE compute and cannot be
+     * @dev Once the epoch closes it is sealed for settlement and cannot be
      *      cancelled. The encrypted fields are left in place (harmless) but the
      *      status flips so netting skips it.
      */
