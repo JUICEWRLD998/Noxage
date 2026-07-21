@@ -1,0 +1,62 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.tile {
+  text-decoration: none;
+  display: block;
+  border-radius: var(--radius-lg);
+  transition: transform var(--motion-fast, 120ms) ease;
+}
+
+.tile:hover {
+  transform: translateY(-2px);
+}
+
+.tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-lg);
+}
+
+.tileTitle {
+  font-family: var(--font-display);
+  font-size: var(--fs-step-1);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.tileBody {
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.statsRow {
+  margin-bottom: var(--space-5);
+}
+
+.stats {
+  display: flex;
+  gap: var(--space-7);
+  flex-wrap: wrap;
+}
+
+.hint {
+  margin-top: var(--space-4);
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+}
+
+.privacy {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+}

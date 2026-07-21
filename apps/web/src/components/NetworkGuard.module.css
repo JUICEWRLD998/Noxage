@@ -1,0 +1,43 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-step--1);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.ok {
+  background: var(--success-muted);
+  color: var(--success);
+}
+
+.wrong {
+  background: var(--danger-muted);
+  color: var(--danger);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  background: var(--danger-muted);
+  border-bottom: 1px solid var(--danger);
+  color: var(--danger);
+  font-size: var(--fs-step--1);
+}
+
+.bannerText {
+  flex: 1;
+}

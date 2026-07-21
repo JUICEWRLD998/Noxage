@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { buttonClassName } from "@/components";
 import patterns from "@/styles/patterns.module.css";
 import styles from "./page.module.css";
 
@@ -10,7 +12,7 @@ export default function Home() {
       />
 
       <main className={styles.main}>
-        <span className={styles.badge}>Phase 0 · Bootstrap</span>
+        <span className={styles.badge}>Confidential DeFi · Sepolia</span>
 
         <section
           className={`${patterns.glassCard} ${patterns.edgeLight} ${styles.card}`}
@@ -21,29 +23,29 @@ export default function Home() {
             Confidential intent settlement for open DeFi — built on iExec Nox.
           </p>
           <p className={styles.body}>
-            Repo scaffold is live. Design tokens, mesh + grain surfaces, and
-            motion foundations are loaded. Product logic arrives in later
-            phases — no mocks, no fake privacy.
+            Submit encrypted trade intents. A TEE runner nets opposing flow and
+            settles only the residual on unmodified Uniswap. Individual sizes,
+            directions, and strategies never appear in plaintext on-chain.
           </p>
 
           <div className={styles.meta}>
             <div className={styles.metaRow}>
-              <span className={styles.metaLabel}>Design system</span>
-              <span className={styles.metaValue}>Noviq · OKLCH · CSS Modules</span>
-            </div>
-            <div className={styles.metaRow}>
-              <span className={styles.metaLabel}>Network target</span>
+              <span className={styles.metaLabel}>Network</span>
               <span className={styles.metaValue}>ETH Sepolia</span>
             </div>
             <div className={styles.metaRow}>
               <span className={styles.metaLabel}>Privacy layer</span>
-              <span className={styles.metaValue}>iExec Nox · TEE</span>
+              <span className={styles.metaValue}>Zama FHEVM · ERC-7984</span>
             </div>
             <div className={styles.metaRow}>
-              <span className={styles.metaLabel}>MVP rail</span>
-              <span className={styles.metaValue}>Uniswap residual (unmodified)</span>
+              <span className={styles.metaLabel}>Settlement rail</span>
+              <span className={styles.metaValue}>Uniswap v3 (unmodified)</span>
             </div>
           </div>
+
+          <Link href="/app" className={buttonClassName("accent", "md", styles.cta)}>
+            Open app →
+          </Link>
         </section>
       </main>
 

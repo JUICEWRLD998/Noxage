@@ -1,0 +1,89 @@
+.card {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--card-radius, var(--radius-lg));
+  padding: var(--space-5);
+  box-shadow: var(--intent-sealed-glow), var(--shadow-2);
+  overflow: clip;
+  backdrop-filter: blur(var(--blur-md)) saturate(1.25);
+  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(1.25);
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    140deg,
+    var(--glass-highlight) 0%,
+    transparent 38%,
+    transparent 62%,
+    oklch(0.72 0.08 285 / 0.22) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.intentId {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.rowLabel {
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.rowValue {
+  font-size: var(--fs-step--1);
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.sealed {
+  color: var(--noxage-private);
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  letter-spacing: 0.04em;
+}
+
+.footer {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
