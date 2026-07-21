@@ -53,6 +53,11 @@ contract NoxageIntentBook is ZamaEthereumConfig {
 
     uint256 public intentCount;
 
+    /// @notice Settlement engine granted FHE ACL access to intent handles so it
+    ///         can net the batch. Set once by the epoch manager's owner before
+    ///         epochs open. Zero until wired.
+    address public settlementEngine;
+
     event IntentSubmitted(
         uint256 indexed intentId,
         uint256 indexed epochId,
@@ -61,15 +66,32 @@ contract NoxageIntentBook is ZamaEthereumConfig {
         uint64 deadline
     );
     event IntentCancelled(uint256 indexed intentId, uint256 indexed epochId, address indexed owner);
+    event SettlementEngineSet(address indexed settlementEngine);
 
     error NoOpenEpoch();
     error DeadlineInPast();
     error NotIntentOwner();
     error IntentNotActive();
     error EpochNotOpenForCancel();
+    error NotOwner();
+    error ZeroAddress();
+    error SettlementEngineAlreadySet();
 
     constructor(address epochManager_) {
         epochManager = NoxageEpochManager(epochManager_);
+    }
+
+    /**
+     * @notice Wire the settlement engine once. Callable only by the epoch
+     *         manager's owner; immutable after the first set. Intents submitted
+     *         after this grant the engine ACL access to their encrypted fields.
+     */
+    function setSettlementEngine(address settlementEngine_) external {
+        if (msg.sender != epochManager.owner()) revert NotOwner();
+        if (settlementEngine_ == address(0)) revert ZeroAddress();
+        if (settlementEngine != address(0)) revert SettlementEngineAlreadySet();
+        settlementEngine = settlementEngine_;
+        emit SettlementEngineSet(settlementEngine_);
     }
 
     /**
