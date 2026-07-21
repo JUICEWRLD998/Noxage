@@ -133,6 +133,14 @@ contract NoxageIntentBook is ZamaEthereumConfig {
         FHE.allow(amount, msg.sender);
         FHE.allow(limit, msg.sender);
 
+        // Grant the settlement engine access so it can net this intent in-epoch.
+        address engine = settlementEngine;
+        if (engine != address(0)) {
+            FHE.allow(side, engine);
+            FHE.allow(amount, engine);
+            FHE.allow(limit, engine);
+        }
+
         intentId = ++intentCount;
         _intents[intentId] = Intent({
             owner: msg.sender,
