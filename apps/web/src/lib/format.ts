@@ -1,5 +1,21 @@
 import { formatUnits } from "viem";
 
+/**
+ * Insert en-US thousands separators into a bigint's decimal string without
+ * round-tripping through Number (which loses precision above 2^53).
+ */
+function groupDigits(whole: string): string {
+  const negative = whole.startsWith("-");
+  const digits = negative ? whole.slice(1) : whole;
+  let grouped = "";
+  for (let i = 0; i < digits.length; i++) {
+    const fromEnd = digits.length - i;
+    grouped += digits[i];
+    if (fromEnd > 1 && (fromEnd - 1) % 3 === 0) grouped += ",";
+  }
+  return negative ? `-${grouped}` : grouped;
+}
+
 /** Format a bigint amount to a readable, tabular-friendly string. */
 export function formatAmount(
   value: bigint,
@@ -9,7 +25,7 @@ export function formatAmount(
   const raw = formatUnits(value, decimals);
   const [whole, frac = ""] = raw.split(".");
   const trimmedFrac = frac.slice(0, maxFractionDigits).replace(/0+$/, "");
-  const wholeGrouped = Number(whole).toLocaleString("en-US");
+  const wholeGrouped = groupDigits(whole);
   return trimmedFrac ? `${wholeGrouped}.${trimmedFrac}` : wholeGrouped;
 }
 

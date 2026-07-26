@@ -117,22 +117,42 @@ export async function encryptIntent(
   };
 }
 
+/** One handle/contract pair to decrypt via the relayer. */
+export interface DecryptRequest {
+  handle: Hex;
+  contractAddress: Address;
+}
+
 /**
- * Decrypt a confidential balance handle for the connected user. Requires an
- * explicit wallet signature (EIP-712) — nothing is decrypted silently.
+ * Batch-decrypt confidential handles for the connected user with a single
+ * keypair + a single EIP-712 wallet signature covering the union of contract
+ * addresses. Zero handles ("no value yet") short-circuit to 0n and are never
+ * sent to the relayer. Returns a map keyed by handle.
  */
-export async function decryptHandle(
-  handle: Hex,
-  tokenAddress: Address,
+export async function decryptHandles(
+  requests: DecryptRequest[],
   userAddress: Address,
   walletClient: WalletClient,
-): Promise<bigint> {
+): Promise<Record<Hex, bigint>> {
+  const results: Record<Hex, bigint> = {};
+
+  // Zero handles mean "nothing here" — resolve locally, skip the relayer.
+  const live = requests.filter((r) => {
+    if (isZeroHandle(r.handle)) {
+      results[r.handle] = 0n;
+      return false;
+    }
+    return true;
+  });
+  if (live.length === 0) return results;
+
   const instance = await getFheInstance();
   const { publicKey, privateKey } = instance.generateKeypair();
 
   const startTimestamp = Math.floor(Date.now() / 1000);
   const durationDays = 10;
-  const contractAddresses = [tokenAddress];
+  // One signature covers the union of contracts holding the handles.
+  const contractAddresses = [...new Set(live.map((r) => r.contractAddress))];
 
   const eip712 = instance.createEIP712(
     publicKey,
@@ -152,8 +172,8 @@ export async function decryptHandle(
     message: eip712.message,
   });
 
-  const result = await instance.userDecrypt(
-    [{ handle, contractAddress: tokenAddress }],
+  const decrypted = await instance.userDecrypt(
+    live.map((r) => ({ handle: r.handle, contractAddress: r.contractAddress })),
     privateKey,
     publicKey,
     signature.replace(/^0x/, ""),
@@ -163,11 +183,32 @@ export async function decryptHandle(
     durationDays,
   );
 
-  const value = result[handle];
-  if (typeof value !== "bigint") {
-    throw new Error("Decryption returned an unexpected type");
+  for (const r of live) {
+    const value = decrypted[r.handle];
+    if (typeof value !== "bigint") {
+      throw new Error("Decryption returned an unexpected type");
+    }
+    results[r.handle] = value;
   }
-  return value;
+  return results;
+}
+
+/**
+ * Decrypt a confidential balance handle for the connected user. Requires an
+ * explicit wallet signature (EIP-712) — nothing is decrypted silently.
+ */
+export async function decryptHandle(
+  handle: Hex,
+  tokenAddress: Address,
+  userAddress: Address,
+  walletClient: WalletClient,
+): Promise<bigint> {
+  const results = await decryptHandles(
+    [{ handle, contractAddress: tokenAddress }],
+    userAddress,
+    walletClient,
+  );
+  return results[handle];
 }
 
 /** A confidential balance handle of all-zeros means "no balance yet". */

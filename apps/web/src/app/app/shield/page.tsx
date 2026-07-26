@@ -26,7 +26,7 @@ import { formatAmount, parseAmount } from "@/lib/format";
 import styles from "./shield.module.css";
 
 export default function ShieldPage() {
-  const { address, isConnected } = useAccount();
+  const { isConnected } = useAccount();
   const [tokenKey, setTokenKey] = useState<TokenKey>("USDC");
   const [amount, setAmount] = useState("");
 

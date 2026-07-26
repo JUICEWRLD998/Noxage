@@ -1,0 +1,61 @@
+.progress {
+  --_fill: var(--epoch-fill);
+  --_current: var(--accent);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.failed {
+  --_fill: var(--danger);
+  --_current: var(--danger);
+}
+
+.track {
+  position: relative;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--epoch-track);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--_fill);
+  transition: width var(--dur-3) var(--ease-out-expo);
+}
+
+.stages {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.stage {
+  font-size: var(--fs-step--1);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-faint);
+  transition: color var(--dur-2) var(--ease-out-quart);
+}
+
+.reached {
+  color: var(--text-secondary);
+}
+
+.current {
+  color: var(--_current);
+}
+
+.meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}

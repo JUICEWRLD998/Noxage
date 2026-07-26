@@ -46,6 +46,26 @@ export default function AppOverview() {
             </p>
           </Card>
         </Link>
+
+        <Link href="/app/epoch" className={styles.tile}>
+          <Card>
+            <h3 className={styles.tileTitle}>Watch the epoch →</h3>
+            <p className={styles.tileBody}>
+              Follow the batch from open to settled, then compare your private
+              fill against the public residual.
+            </p>
+          </Card>
+        </Link>
+
+        <Link href="/app/fills" className={styles.tile}>
+          <Card>
+            <h3 className={styles.tileTitle}>Decrypt fills →</h3>
+            <p className={styles.tileBody}>
+              Your settled fills stay sealed until you sign. History comes from
+              the chain, not this browser.
+            </p>
+          </Card>
+        </Link>
       </div>
 
       <div className={styles.statsRow}>

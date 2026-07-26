@@ -6,7 +6,11 @@ import { truncateHex } from "@/lib/format";
 import { Button } from "./Button";
 import styles from "./WalletConnectButton.module.css";
 
-/** Connect / disconnect control. Lists available connectors (injected + WC). */
+/**
+ * Connect / disconnect control. Lists available connectors — deliberately
+ * injected-only: WalletConnect's barrel import pulls in @x402/base-account
+ * deps that break the production build, so we don't ship a WC connector.
+ */
 export function WalletConnectButton() {
   const { address, isConnected } = useAccount();
   const { connect, connectors, isPending } = useConnect();

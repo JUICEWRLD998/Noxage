@@ -37,7 +37,26 @@ export const addresses = {
     "NEXT_PUBLIC_MOCK_WETH_ADDRESS",
     process.env.NEXT_PUBLIC_MOCK_WETH_ADDRESS,
   ),
+  fillLedger: required(
+    "NEXT_PUBLIC_NOXAGE_FILL_LEDGER_ADDRESS",
+    process.env.NEXT_PUBLIC_NOXAGE_FILL_LEDGER_ADDRESS,
+  ),
+  // "Executor" is the deploy-time name for the settlement engine (same address).
+  settlementEngine: required(
+    "NEXT_PUBLIC_NOXAGE_SETTLEMENT_EXECUTOR_ADDRESS",
+    process.env.NEXT_PUBLIC_NOXAGE_SETTLEMENT_EXECUTOR_ADDRESS,
+  ),
 } as const;
+
+/**
+ * Sepolia block in which NoxageIntentBook
+ * (0x3D979f0F9e2cCd1810494F3453BE7527270F3C00) was deployed — creation tx
+ * 0x556dffa72c3a5a89baf594e866be09fd1b9ec8815f57b5b7d3f6472c0e46a5b1
+ * (verified via eth_getTransactionReceipt + Blockscout, 2026-07-26T09:34:36Z).
+ * The fill ledger and settlement engine deployed the same day, so this block
+ * safely lower-bounds every Noxage event scan.
+ */
+export const INTENT_BOOK_DEPLOY_BLOCK = 11353817n;
 
 export type TokenKey = "USDC" | "WETH";
 

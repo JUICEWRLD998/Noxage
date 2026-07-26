@@ -22,8 +22,9 @@ interface NavItem {
 const NAV: NavItem[] = [
   { href: "/app/shield", label: "Shield" },
   { href: "/app/intent", label: "Intent" },
-  { href: "/app/epoch", label: "Epoch", phase: "Phase 6" },
-  { href: "/app/fills", label: "Fills", phase: "Phase 6" },
+  { href: "/app/epoch", label: "Epoch" },
+  { href: "/app/fills", label: "Fills" },
+  { href: "/app/auditor", label: "Auditor" },
 ];
 
 export default function AppLayout({ children }: { children: ReactNode }) {

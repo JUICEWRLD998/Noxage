@@ -1,0 +1,140 @@
+.lifecycleCard {
+  margin-bottom: var(--space-5);
+}
+
+.clock {
+  margin-bottom: var(--space-5);
+}
+
+.statRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.closeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pagerLabel {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-step--1);
+  color: var(--text-secondary);
+  min-width: 5ch;
+  text-align: center;
+}
+
+.settlingCard {
+  margin-bottom: var(--space-5);
+}
+
+.settlingTitle {
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.split {
+  margin-bottom: var(--space-5);
+}
+
+.fillStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.estimateNote {
+  font-size: var(--fs-step--1);
+  color: var(--text-faint);
+  margin-top: calc(-1 * var(--space-2));
+}
+
+.quietEmpty {
+  color: var(--text-muted);
+  font-size: var(--fs-step--1);
+  padding: var(--space-4) 0;
+}
+
+.perfectNet {
+  padding: var(--space-2) 0;
+}
+
+.perfectTitle {
+  font-family: var(--font-display);
+  font-size: var(--fs-step-1);
+  font-weight: var(--weight-semibold);
+  color: var(--success);
+  margin-bottom: var(--space-2);
+}
+
+.residual {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.residualDirection {
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.residualRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.residualRow:last-of-type {
+  border-bottom: none;
+}
+
+.residualLabel {
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+}
+
+.txRow {
+  margin-top: var(--space-2);
+}
+
+.skeletonGap {
+  height: var(--space-4);
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: var(--fs-step--1);
+  line-height: 1.5;
+}
+
+.errorText {
+  margin-top: var(--space-2);
+  font-size: var(--fs-step--1);
+  color: var(--danger);
+}

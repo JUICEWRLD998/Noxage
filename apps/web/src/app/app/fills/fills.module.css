@@ -1,0 +1,89 @@
+.section {
+  margin-bottom: var(--space-7);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: var(--fs-step-1);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.fillsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-4);
+}
+
+.skeletonGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-4);
+}
+
+.intentList {
+  display: flex;
+  flex-direction: column;
+}
+
+.intentRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.intentRow:last-child {
+  border-bottom: none;
+}
+
+.intentId {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-step--1);
+  color: var(--text-primary);
+  min-width: 3.5rem;
+}
+
+.intentEpoch {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+}
+
+.intentDeadline {
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.intentActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.errorText {
+  margin-top: var(--space-2);
+  font-size: var(--fs-step--1);
+  color: var(--danger);
+}
+
+.skeletonRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}

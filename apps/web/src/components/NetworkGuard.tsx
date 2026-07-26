@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, type KeyboardEvent } from "react";
 import { useAccount, useSwitchChain } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { Button } from "./Button";
@@ -22,29 +23,106 @@ export function NetworkBadge() {
 }
 
 /**
- * Blocking banner shown when connected to the wrong chain. Noxage runs on
- * Sepolia only, so we hard-gate rather than silently misbehave.
+ * Hard gate shown when connected to the wrong chain. Noxage runs on Sepolia
+ * only, so we render a blocking, mandatory overlay (plus the banner) rather
+ * than silently misbehave. Escape is intentionally a no-op — the only way
+ * out is switching networks (or disconnecting via the wallet itself).
  */
 export function NetworkGuardBanner() {
-  const { isConnected, chainId } = useAccount();
+  const { isConnected, chainId, chain } = useAccount();
   const { switchChain, isPending } = useSwitchChain();
 
-  if (!isConnected || chainId === sepolia.id) return null;
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const blocked = isConnected && chainId !== sepolia.id;
+
+  // Move focus into the overlay and lock body scroll while it is shown.
+  useEffect(() => {
+    if (!blocked) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      previouslyFocused?.focus?.();
+    };
+  }, [blocked]);
+
+  if (!blocked) return null;
+
+  // wagmi only resolves `chain` for configured chains; fall back to the id.
+  const wrongChainName = chain?.name ?? `an unsupported network (id ${chainId})`;
+
+  // Keep Tab cycling inside the dialog (the switch button is the only stop).
+  const trapFocus = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Tab") return;
+    const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(
+      "button:not([disabled])",
+    );
+    if (!focusables || focusables.length === 0) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || active === dialogRef.current)) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   return (
-    <div className={styles.banner} role="alert">
-      <div className={styles.bannerText}>
-        <strong>Wrong network.</strong> Noxage runs on Ethereum Sepolia. Switch
-        to continue.
+    <>
+      <div className={styles.banner} role="alert">
+        <div className={styles.bannerText}>
+          <strong>Wrong network.</strong> Noxage runs on Ethereum Sepolia.
+          Switch to continue.
+        </div>
+        <Button
+          variant="accent"
+          size="sm"
+          loading={isPending}
+          onClick={() => switchChain({ chainId: sepolia.id })}
+        >
+          Switch to Sepolia
+        </Button>
       </div>
-      <Button
-        variant="accent"
-        size="sm"
-        loading={isPending}
-        onClick={() => switchChain({ chainId: sepolia.id })}
-      >
-        Switch to Sepolia
-      </Button>
-    </div>
+
+      <div className={styles.overlay}>
+        <div
+          ref={dialogRef}
+          className={styles.dialog}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="network-guard-title"
+          aria-describedby="network-guard-desc"
+          tabIndex={-1}
+          onKeyDown={trapFocus}
+        >
+          <h2 id="network-guard-title" className={styles.dialogTitle}>
+            Wrong network
+          </h2>
+          <p id="network-guard-desc" className={styles.dialogText}>
+            Noxage runs exclusively on Ethereum Sepolia — switch networks to
+            continue.
+          </p>
+          <Button
+            variant="accent"
+            size="lg"
+            loading={isPending}
+            onClick={() => switchChain({ chainId: sepolia.id })}
+          >
+            Switch to Sepolia
+          </Button>
+          <p className={styles.dialogChain}>
+            Connected to <strong>{wrongChainName}</strong>
+          </p>
+        </div>
+      </div>
+    </>
   );
 }
