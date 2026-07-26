@@ -1,68 +1,66 @@
 "use client";
 
-import { useState } from "react";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { truncateHex } from "@/lib/format";
 import { Button } from "./Button";
 import styles from "./WalletConnectButton.module.css";
 
 /**
- * Connect / disconnect control. Lists available connectors — deliberately
- * injected-only: WalletConnect's barrel import pulls in @x402/base-account
- * deps that break the production build, so we don't ship a WC connector.
+ * Connect / disconnect control backed by RainbowKit. Clicking "Connect wallet"
+ * opens the RainbowKit modal listing MetaMask / Phantom / injected wallets
+ * (see lib/wagmi.ts for why the list is extension-only). Nothing autoconnects:
+ * the provider mounts with reconnectOnMount={false}.
  */
 export function WalletConnectButton() {
-  const { address, isConnected } = useAccount();
-  const { connect, connectors, isPending } = useConnect();
-  const { disconnect } = useDisconnect();
-  const [open, setOpen] = useState(false);
-
-  if (isConnected && address) {
-    return (
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={() => disconnect()}
-        className={styles.address}
-        title="Disconnect"
-      >
-        <span className={styles.dot} aria-hidden="true" />
-        {truncateHex(address)}
-      </Button>
-    );
-  }
-
-  const readyConnectors = connectors.filter((c) => c.type !== "mock");
-
   return (
-    <div className={styles.wrapper}>
-      <Button
-        variant="accent"
-        size="sm"
-        loading={isPending}
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
-        Connect wallet
-      </Button>
-      {open && (
-        <div className={styles.menu} role="menu">
-          {readyConnectors.map((connector) => (
-            <button
-              key={connector.uid}
-              role="menuitem"
-              className={styles.menuItem}
-              onClick={() => {
-                connect({ connector });
-                setOpen(false);
-              }}
-            >
-              {connector.name}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+    <ConnectButton.Custom>
+      {({
+        account,
+        chain,
+        openAccountModal,
+        openChainModal,
+        openConnectModal,
+        mounted,
+      }) => {
+        const connected = mounted && account && chain;
+
+        if (!mounted) {
+          return (
+            <Button variant="accent" size="sm" disabled aria-hidden="true">
+              Connect wallet
+            </Button>
+          );
+        }
+
+        if (!connected) {
+          return (
+            <Button variant="accent" size="sm" onClick={openConnectModal}>
+              Connect wallet
+            </Button>
+          );
+        }
+
+        if (chain.unsupported) {
+          return (
+            <Button variant="secondary" size="sm" onClick={openChainModal}>
+              Wrong network
+            </Button>
+          );
+        }
+
+        return (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={openAccountModal}
+            className={styles.address}
+            title="Account"
+          >
+            <span className={styles.dot} aria-hidden="true" />
+            {truncateHex(account.address)}
+          </Button>
+        );
+      }}
+    </ConnectButton.Custom>
   );
 }

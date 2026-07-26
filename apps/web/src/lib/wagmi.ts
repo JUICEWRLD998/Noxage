@@ -1,16 +1,35 @@
-import { createConfig, http, injected } from "wagmi";
+import { connectorsForWallets } from "@rainbow-me/rainbowkit";
+import {
+  injectedWallet,
+  metaMaskWallet,
+  phantomWallet,
+} from "@rainbow-me/rainbowkit/wallets";
+import { createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
 
 const rpcUrl =
   process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ??
   "https://ethereum-sepolia-rpc.publicnode.com";
 
-// Injected only (MetaMask / Rabby / Brave via the browser extension). `injected`
-// is re-exported from the `wagmi` entrypoint, so we avoid the `wagmi/connectors`
-// barrel — that barrel also pulls in the Base Account connector, whose
-// @coinbase/cdp-sdk dependency statically imports optional, uninstalled `@x402/*`
-// packages that break the production build (webpack errors / Turbopack hangs).
-const connectors = [injected({ shimDisconnect: true })];
+// RainbowKit wallet list, deliberately restricted to extension wallets
+// (MetaMask, Phantom, plus a generic injected fallback). Do NOT add
+// coinbaseWallet or walletConnectWallet here: their dependency chains pull in
+// @coinbase/cdp-sdk, whose optional, uninstalled `@x402/*` packages break the
+// production build (webpack errors / Turbopack hangs).
+const connectors = connectorsForWallets(
+  [
+    {
+      groupName: "Wallets",
+      wallets: [metaMaskWallet, phantomWallet, injectedWallet],
+    },
+  ],
+  {
+    appName: "Noxage",
+    // Required by the RainbowKit API but only used by WalletConnect-based
+    // wallets, none of which are configured above.
+    projectId: "NOXAGE_PLACEHOLDER",
+  },
+);
 
 export const wagmiConfig = createConfig({
   chains: [sepolia],
