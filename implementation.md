@@ -417,9 +417,12 @@ User decrypts own fill (auditor optional)
 
 **Definition of Done**
 
-- [ ] User can connect, shield, and submit a sealed intent on Sepolia  
-- [ ] UI never claims privacy it doesn’t deliver  
-- [ ] Fully keyboard accessible; focus rings present  
+- [x] User can connect, shield, and submit a sealed intent on Sepolia (`/app/shield`, `/app/intent`)  
+- [x] UI never claims privacy it doesn’t deliver (sealed values render as `●●●●`; no mock data anywhere)  
+- [x] Fully keyboard accessible; focus rings present (global `:focus-visible`, `aria-pressed`/`fieldset` semantics)  
+- [x] Wrong network hard-gated by a blocking, focus-trapped dialog (`NetworkGuard`)  
+
+**Deviation:** wallet connect is **injected-only**. The WalletConnect connector's barrel import pulls `@x402/base-account` transitively and breaks the production build; documented in `lib/wagmi.ts`.
 
 ---
 
@@ -441,9 +444,15 @@ User decrypts own fill (auditor optional)
 
 **Definition of Done**
 
-- [ ] Full path Shield → Intent → Epoch settle → Decrypt fill works without mocks  
-- [ ] PrivacySplitView usable in demo video  
-- [ ] Fills history persists across refresh (chain is source of truth)  
+- [x] Full path Shield → Intent → Epoch settle → Decrypt fill works without mocks  
+- [x] PrivacySplitView usable in demo video (`/app/epoch`, settled state)  
+- [x] Fills history persists across refresh — rebuilt from `IntentSubmitted` / `FillCredited` logs, not local state  
+- [x] `/app/auditor` ships as ERC-7984 **observer** grant/revoke + observer decrypt view  
+
+**Scope notes (honest):**
+
+- **Auditor semantics.** `NoxageFillLedger` has no fill-level auditor grant, so selective disclosure is implemented at the confidential-token level via ERC-7984 observer access. An observer only gains ACL on handles created *after* appointment; the UI states this caveat rather than implying retroactive visibility.
+- **WakeMeter.** Per-user netting share is not derivable from an epoch-aggregate residual. The meter compares the user's decrypted paid leg against `ResidualSwapped.amountIn`, is labelled "Estimated from your fill vs the public residual," and reports 100% only for a true perfect net (no residual swap).
 
 ---
 

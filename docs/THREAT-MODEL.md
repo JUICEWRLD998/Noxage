@@ -95,6 +95,35 @@ multi-pair, pro-rata under partial liquidity) off-chain; the on-chain residual
 | Metadata leakage (pair, count, residual) | Accepted; documented above |
 | Solo-intent size leak via residual | Accepted; documented product behavior |
 
+## 6b. Client-side surface (Phase 5–6 frontend)
+
+The app is a thin client over the contracts, but it introduces its own
+observable surface that a privacy product should state plainly.
+
+| Surface | What it sees | Notes |
+|---|---|---|
+| **RPC provider** | Your address, every read you make, and the timing of your writes | Standard for any dApp; use your own RPC in `NEXT_PUBLIC_SEPOLIA_RPC_URL` if this matters to you |
+| **Zama relayer** | Encrypted-input requests and user-decrypt requests (handle + your address + EIP-712 signature) | It returns cleartext **to you**; the contract ACL is what authorizes it |
+| **Browser memory** | Decrypted balances and fill legs, for the lifetime of the page | Nothing is persisted to `localStorage`; a refresh re-seals the UI and requires a fresh signature |
+| **Wallet** | Every signature request | Decryption always requires an explicit signature — the app never decrypts silently |
+
+Client-side product rules enforced in the UI:
+
+1. **No mock data.** Every displayed value derives from a contract read, a log, or a tx receipt. Empty and failure states say so rather than inventing a number.
+2. **Sealed by default.** Confidential values render as `●●●●` until the user signs a decrypt request.
+3. **History is chain-derived.** `/app/fills` rebuilds from `IntentSubmitted` and `FillCredited` logs, so it survives refresh and is honest about what settled.
+4. **Failures are shown.** A `Failed` epoch is reported as failed, including the environmental Sepolia residual-swap limitation documented in the README.
+
+### Observer (auditor) semantics — stated precisely
+
+Selective disclosure uses ERC-7984 **observer access** on the confidential token
+(`setObserver` / `observer`), not a fill-level grant — `NoxageFillLedger` has no
+auditor grant function. Consequences the UI states directly:
+
+- An observer gains ACL on balance handles created **after** appointment. Handles predating the grant stay sealed; the user's balance handle refreshes on their next transfer or wrap.
+- Grants are per-token and revocable (`setObserver(account, address(0))`).
+- Observer access covers **confidential balances**, not fill legs. Fill decryption remains owner-only.
+
 ## 7. Out of scope (later phases)
 
 - End-to-end confidential balance debit/credit on fill (shielded inventory)

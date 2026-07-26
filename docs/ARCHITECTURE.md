@@ -7,9 +7,13 @@
 Noxage is a **privacy membrane** over public DeFi:
 
 - Users encrypt **intents** (size, direction, optional limit)
-- Nox **TEE** netting collapses opposing flow inside an **epoch**
+- **Homomorphic netting** (on-chain FHE) collapses opposing flow inside an **epoch**
 - Only the **residual** hits unmodified public rails (Uniswap v3 MVP)
 - Fills return as **confidential balances** with **selective disclosure** (ACL)
+
+> Netting runs on-chain with FHEVM rather than in a TEE runner — see
+> "Why not a separate TEE runner" in `docs/THREAT-MODEL.md`. An iExec Nox TEE
+> path remains a later option for richer plans behind the same interface.
 
 Public protocols are never forked. Composability is preserved at settlement.
 

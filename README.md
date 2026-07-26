@@ -101,10 +101,37 @@ No Tailwind. Components consume semantic / component tokens only.
 
 ---
 
+## App surfaces
+
+| Route | Purpose |
+|---|---|
+| `/` | Product landing |
+| `/app` | Overview: open epoch, sealed intent count, entry points |
+| `/app/shield` | Wrap public ERC-20 → confidential balance; unwrap back out |
+| `/app/intent` | Encrypt side/amount/limit locally; seal into the open epoch |
+| `/app/epoch` | Epoch clock + lifecycle; on settle, private fill vs public residual |
+| `/app/fills` | Fill history and per-fill decrypt; intent history with cancel |
+| `/app/auditor` | Grant/revoke observer access; decrypt as an authorized observer |
+| `/styleguide` | Living design-system reference (noindex) |
+
+Every number shown comes from chain state or a tx receipt — there is no mock data path in the app.
+
+---
+
 ## Network
 
 - **Target:** Ethereum Sepolia (`chainId` 11155111)
-- Contract addresses will land in `deployments/sepolia.json` after Phase 2+
+- Contract addresses live in [`deployments/sepolia.json`](./deployments/sepolia.json)
+
+### Known Sepolia limitation (honest status)
+
+Residual settlement is fully implemented and green in the contract test suite, but **on Sepolia only balanced epochs (residual = 0) currently reach `Settled`**. Three independent reasons, all environmental rather than logic bugs:
+
+1. The deployed router at `0x3bFA…e48E` is **SwapRouter02**, whose `exactInputSingle` struct omits `deadline`; `contracts/interfaces/ISwapRouter.sol` encodes the classic selector.
+2. No mWETH/mUSDC Uniswap v3 pool exists on Sepolia at any fee tier.
+3. The settlement engine holds no token inventory yet.
+
+A non-zero residual therefore reverts into the engine's `try/catch` and marks the epoch `Failed` — which the UI reports honestly rather than hiding. Fixing it means switching the interface to SwapRouter02, seeding a pool, and funding the engine.
 
 ---
 
