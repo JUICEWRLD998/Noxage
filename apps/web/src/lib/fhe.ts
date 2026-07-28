@@ -1,6 +1,12 @@
 "use client";
 
-import { toHex, type Address, type Hex, type WalletClient } from "viem";
+import {
+  getAddress,
+  toHex,
+  type Address,
+  type Hex,
+  type WalletClient,
+} from "viem";
 import type { Eip1193Provider } from "@/lib/wallet";
 
 // The Zama relayer SDK touches window / Worker / wasm, so it must only ever be
@@ -49,6 +55,10 @@ interface FhevmInstance {
 
 let instancePromise: Promise<FhevmInstance> | null = null;
 let boundProvider: Eip1193Provider | null = null;
+
+function normalizeAddress(address: Address | string): Address {
+  return getAddress(address.toLowerCase());
+}
 
 function resolveProvider(explicit?: Eip1193Provider): Eip1193Provider {
   if (explicit) return explicit;
@@ -124,7 +134,10 @@ export async function encryptIntent(
   provider?: Eip1193Provider,
 ): Promise<EncryptedIntent> {
   const instance = await getFheInstance(provider);
-  const input = instance.createEncryptedInput(bookAddress, userAddress);
+  const input = instance.createEncryptedInput(
+    normalizeAddress(bookAddress),
+    normalizeAddress(userAddress),
+  );
   input.add8(intent.side);
   input.add64(intent.amount);
   input.add64(intent.limit);
@@ -172,8 +185,11 @@ export async function decryptHandles(
 
   const startTimestamp = Math.floor(Date.now() / 1000);
   const durationDays = 10;
+  const normalizedUserAddress = normalizeAddress(userAddress);
   // One signature covers the union of contracts holding the handles.
-  const contractAddresses = [...new Set(live.map((r) => r.contractAddress))];
+  const contractAddresses = [
+    ...new Set(live.map((r) => normalizeAddress(r.contractAddress))),
+  ];
 
   const eip712 = instance.createEIP712(
     publicKey,
@@ -181,10 +197,17 @@ export async function decryptHandles(
     startTimestamp,
     durationDays,
   );
+  const verifyingContract = eip712.domain.verifyingContract;
+  const domain = {
+    ...eip712.domain,
+    ...(typeof verifyingContract === "string"
+      ? { verifyingContract: normalizeAddress(verifyingContract) }
+      : {}),
+  };
 
   const signature = await walletClient.signTypedData({
-    account: userAddress,
-    domain: eip712.domain,
+    account: normalizedUserAddress,
+    domain,
     types: {
       UserDecryptRequestVerification:
         eip712.types.UserDecryptRequestVerification,
@@ -194,12 +217,15 @@ export async function decryptHandles(
   });
 
   const decrypted = await instance.userDecrypt(
-    live.map((r) => ({ handle: r.handle, contractAddress: r.contractAddress })),
+    live.map((r) => ({
+      handle: r.handle,
+      contractAddress: normalizeAddress(r.contractAddress),
+    })),
     privateKey,
     publicKey,
     signature.replace(/^0x/, ""),
     contractAddresses,
-    userAddress,
+    normalizedUserAddress,
     startTimestamp,
     durationDays,
   );

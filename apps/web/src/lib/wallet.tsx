@@ -14,6 +14,7 @@ import {
   createPublicClient,
   createWalletClient,
   custom,
+  getAddress,
   http,
   type Abi,
   type Address,
@@ -61,6 +62,10 @@ function getInjectedProvider(): Eip1193Provider | undefined {
   return (window as unknown as { ethereum?: Eip1193Provider }).ethereum;
 }
 
+function normalizeAddress(address: Address): Address {
+  return getAddress(address.toLowerCase());
+}
+
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<Address | undefined>();
   const [chainId, setChainId] = useState<number | undefined>();
@@ -86,7 +91,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const onAccountsChanged = (accounts: unknown) => {
       const list = accounts as Address[];
       if (list[0]) {
-        setAddress(list[0]);
+        setAddress(normalizeAddress(list[0]));
       } else {
         setAddress(undefined);
         setProvider(undefined);
@@ -121,7 +126,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       })) as Address[];
       const chain = (await eth.request({ method: "eth_chainId" })) as Hex;
       setProvider(eth);
-      setAddress(accounts[0]);
+      setAddress(accounts[0] ? normalizeAddress(accounts[0]) : undefined);
       setChainId(Number.parseInt(chain, 16));
       setUserInitiated(true);
     } finally {
