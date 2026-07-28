@@ -5,6 +5,10 @@
   margin-bottom: var(--space-6);
 }
 
+.grid > * {
+  min-width: 0;
+}
+
 .epochRow {
   display: flex;
   align-items: center;
@@ -40,6 +44,8 @@
   border: 0;
   padding: 0;
   margin: 0;
+  min-width: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -66,6 +72,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 .label {
@@ -86,10 +93,12 @@
 .sideToggle {
   display: flex;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 .sideBtn {
   flex: 1;
+  min-width: 0;
   appearance: none;
   border: 1px solid var(--border-subtle);
   background: var(--surface-inset);
