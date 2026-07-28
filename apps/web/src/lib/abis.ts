@@ -148,6 +148,13 @@ export const intentBookAbi = [
   },
   {
     type: "function",
+    name: "epochIntentIds",
+    stateMutability: "view",
+    inputs: [{ name: "epochId", type: "uint256" }],
+    outputs: [{ type: "uint256[]" }],
+  },
+  {
+    type: "function",
     name: "getIntent",
     stateMutability: "view",
     inputs: [{ name: "intentId", type: "uint256" }],
@@ -341,6 +348,21 @@ export const fillLedgerAbi = [
 ] as const;
 
 export const settlementEngineAbi = [
+  {
+    type: "error",
+    name: "EpochNotClosed",
+    inputs: [{ name: "epochId", type: "uint256" }],
+  },
+  {
+    type: "error",
+    name: "AlreadyPrepared",
+    inputs: [{ name: "epochId", type: "uint256" }],
+  },
+  {
+    type: "error",
+    name: "NoActiveIntents",
+    inputs: [{ name: "epochId", type: "uint256" }],
+  },
   {
     type: "function",
     name: "prepareSettlement",

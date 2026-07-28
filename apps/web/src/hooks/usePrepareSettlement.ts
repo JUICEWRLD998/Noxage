@@ -3,7 +3,11 @@
 import { useCallback, useState } from "react";
 import type { Hex } from "viem";
 import { usePublicClient, useWriteContract } from "@/lib/wallet";
-import { settlementEngineAbi } from "@/lib/abis";
+import {
+  IntentStatus,
+  intentBookAbi,
+  settlementEngineAbi,
+} from "@/lib/abis";
 import { addresses } from "@/lib/contracts";
 import { useTxToast } from "./useTxToast";
 
@@ -30,6 +34,31 @@ export function usePrepareSettlement() {
       setLastTx(null);
       try {
         setStage("preparing");
+        const intentIds = await publicClient.readContract({
+          address: addresses.intentBook,
+          abi: intentBookAbi,
+          functionName: "epochIntentIds",
+          args: [epochId],
+        });
+        const intents = await Promise.all(
+          intentIds.map((intentId) =>
+            publicClient.readContract({
+              address: addresses.intentBook,
+              abi: intentBookAbi,
+              functionName: "getIntent",
+              args: [intentId],
+            }),
+          ),
+        );
+        const hasActiveIntent = intents.some(
+          (intent) => intent.status === IntentStatus.Active,
+        );
+        if (!hasActiveIntent) {
+          throw new Error(
+            `Epoch #${epochId} has no active intents to net. Open a new epoch and seal at least one intent before closing it.`,
+          );
+        }
+
         toast.info(
           "Preparing settlement",
           `Netting epoch #${epochId} over encrypted intents.`,

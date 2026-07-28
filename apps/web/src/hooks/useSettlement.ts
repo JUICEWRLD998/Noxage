@@ -5,6 +5,10 @@ import { getAbiItem, type Hex } from "viem";
 import { usePublicClient } from "@/lib/wallet";
 import { settlementEngineAbi, SettlementStatus } from "@/lib/abis";
 import { addresses, INTENT_BOOK_DEPLOY_BLOCK } from "@/lib/contracts";
+import {
+  getHistoricalLogRanges,
+  historicalLogsClient,
+} from "@/lib/logs";
 
 const residualSwappedEvent = getAbiItem({
   abi: settlementEngineAbi,
@@ -76,18 +80,43 @@ export function useSettlement(epochId?: bigint) {
         }),
       ]);
 
-      const logArgs = {
-        address: addresses.settlementEngine,
-        args: { epochId },
-        fromBlock: INTENT_BOOK_DEPLOY_BLOCK,
-        toBlock: "latest",
-      } as const;
-
-      const [swapLogs, finalizedLogs, failedLogs] = await Promise.all([
-        publicClient.getLogs({ ...logArgs, event: residualSwappedEvent }),
-        publicClient.getLogs({ ...logArgs, event: settlementFinalizedEvent }),
-        publicClient.getLogs({ ...logArgs, event: settlementFailedEvent }),
-      ]);
+      const ranges = await getHistoricalLogRanges(INTENT_BOOK_DEPLOY_BLOCK);
+      const [swapLogsByRange, finalizedLogsByRange, failedLogsByRange] =
+        await Promise.all([
+          Promise.all(
+            ranges.map((range) =>
+              historicalLogsClient.getLogs({
+                address: addresses.settlementEngine,
+                event: residualSwappedEvent,
+                args: { epochId },
+                ...range,
+              }),
+            ),
+          ),
+          Promise.all(
+            ranges.map((range) =>
+              historicalLogsClient.getLogs({
+                address: addresses.settlementEngine,
+                event: settlementFinalizedEvent,
+                args: { epochId },
+                ...range,
+              }),
+            ),
+          ),
+          Promise.all(
+            ranges.map((range) =>
+              historicalLogsClient.getLogs({
+                address: addresses.settlementEngine,
+                event: settlementFailedEvent,
+                args: { epochId },
+                ...range,
+              }),
+            ),
+          ),
+        ]);
+      const swapLogs = swapLogsByRange.flat();
+      const finalizedLogs = finalizedLogsByRange.flat();
+      const failedLogs = failedLogsByRange.flat();
 
       const swapLog = swapLogs.at(-1);
       const residualSwap: ResidualSwap | null =

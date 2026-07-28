@@ -5,6 +5,10 @@ import { getAbiItem } from "viem";
 import { useAccount, usePublicClient } from "@/lib/wallet";
 import { intentBookAbi, type IntentStatus } from "@/lib/abis";
 import { addresses, INTENT_BOOK_DEPLOY_BLOCK } from "@/lib/contracts";
+import {
+  getHistoricalLogRanges,
+  historicalLogsClient,
+} from "@/lib/logs";
 
 const intentSubmittedEvent = getAbiItem({
   abi: intentBookAbi,
@@ -35,13 +39,19 @@ export function useIntents() {
     queryFn: async (): Promise<OwnedIntent[]> => {
       if (!address || !publicClient) return [];
 
-      const logs = await publicClient.getLogs({
-        address: addresses.intentBook,
-        event: intentSubmittedEvent,
-        args: { owner: address },
-        fromBlock: INTENT_BOOK_DEPLOY_BLOCK,
-        toBlock: "latest",
-      });
+      const ranges = await getHistoricalLogRanges(INTENT_BOOK_DEPLOY_BLOCK);
+      const logs = (
+        await Promise.all(
+          ranges.map((range) =>
+            historicalLogsClient.getLogs({
+              address: addresses.intentBook,
+              event: intentSubmittedEvent,
+              args: { owner: address },
+              ...range,
+            }),
+          ),
+        )
+      ).flat();
 
       const intentIds = [
         ...new Set(

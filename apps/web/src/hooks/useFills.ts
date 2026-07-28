@@ -7,6 +7,10 @@ import { useAccount, usePublicClient, useWalletClient } from "@/lib/wallet";
 import { fillLedgerAbi } from "@/lib/abis";
 import { addresses, INTENT_BOOK_DEPLOY_BLOCK } from "@/lib/contracts";
 import { decryptHandles } from "@/lib/fhe";
+import {
+  getHistoricalLogRanges,
+  historicalLogsClient,
+} from "@/lib/logs";
 import { getConnectorProvider } from "@/lib/wallet-provider";
 import { useTxToast } from "./useTxToast";
 
@@ -61,13 +65,19 @@ export function useFills() {
     queryFn: async (): Promise<OwnedFill[]> => {
       if (!address || !publicClient) return [];
 
-      const logs = await publicClient.getLogs({
-        address: addresses.fillLedger,
-        event: fillCreditedEvent,
-        args: { owner: address },
-        fromBlock: INTENT_BOOK_DEPLOY_BLOCK,
-        toBlock: "latest",
-      });
+      const ranges = await getHistoricalLogRanges(INTENT_BOOK_DEPLOY_BLOCK);
+      const logs = (
+        await Promise.all(
+          ranges.map((range) =>
+            historicalLogsClient.getLogs({
+              address: addresses.fillLedger,
+              event: fillCreditedEvent,
+              args: { owner: address },
+              ...range,
+            }),
+          ),
+        )
+      ).flat();
 
       const seen = new Set<bigint>();
       const entries: { intentId: bigint; epochId: bigint }[] = [];

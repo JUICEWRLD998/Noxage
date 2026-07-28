@@ -274,6 +274,16 @@ interface ReadContractOptions {
   };
 }
 
+function serializeContractArgs(args: readonly unknown[] | undefined): string {
+  return (
+    JSON.stringify(args, (_, value) =>
+      typeof value === "bigint"
+        ? { __noxageBigInt: value.toString() }
+        : value,
+    ) ?? "undefined"
+  );
+}
+
 /** Drop-in replacement for wagmi's useReadContract. */
 export function useReadContract<T = unknown>({
   address,
@@ -286,7 +296,12 @@ export function useReadContract<T = unknown>({
   const enabled = query?.enabled !== false && !!address;
 
   const result = useQuery({
-    queryKey: ["readContract", address, functionName, args],
+    queryKey: [
+      "readContract",
+      address,
+      functionName,
+      serializeContractArgs(args),
+    ],
     enabled,
     refetchInterval: query?.refetchInterval,
     queryFn: () =>
