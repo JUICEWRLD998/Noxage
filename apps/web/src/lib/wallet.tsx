@@ -71,13 +71,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [userInitiated, setUserInitiated] = useState(false);
 
   const walletClient = useMemo(() => {
-    if (!provider || !address) return undefined;
+    if (!userInitiated || !provider || !address) return undefined;
     return createWalletClient({
       account: address,
       chain: sepolia,
       transport: custom(provider),
     });
-  }, [provider, address]);
+  }, [userInitiated, provider, address]);
 
   // Listen for wallet events only after an explicit connect — never auto-reconnect.
   useEffect(() => {
@@ -173,7 +173,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     () => ({
       address,
       chainId,
-      isConnected: !!address,
+      isConnected: userInitiated && !!address,
       isConnecting,
       isSwitching,
       provider,
@@ -186,6 +186,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [
       address,
       chainId,
+      userInitiated,
       isConnecting,
       isSwitching,
       provider,
