@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import type { Hex } from "viem";
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { useAccount, usePublicClient, useWriteContract } from "@/lib/wallet";
 import { confidentialTokenAbi } from "@/lib/abis";
 import { TOKENS, type TokenKey } from "@/lib/contracts";
 import { isZeroHandle } from "@/lib/fhe";

@@ -3,39 +3,41 @@
 import { useCallback, useState } from "react";
 import type { Hex } from "viem";
 import { usePublicClient, useWriteContract } from "@/lib/wallet";
-import { epochManagerAbi } from "@/lib/abis";
+import { settlementEngineAbi } from "@/lib/abis";
 import { addresses } from "@/lib/contracts";
 import { useTxToast } from "./useTxToast";
 
-type CloseStage = "idle" | "closing" | "done" | "error";
+type PrepareStage = "idle" | "preparing" | "done" | "error";
 
 /**
- * Permissionless epoch close: anyone may seal an open epoch once
- * openedAt + epochDuration has elapsed (the owner can close any time). The UI
- * offers this when the countdown hits zero so the batch cadence stays honest
- * even if the operator stalls.
+ * Permissionless homomorphic netting step: anyone may call prepareSettlement
+ * once an epoch is closed. Reveals only aggregate residual handles for KMS
+ * decrypt; finalize still requires the engine owner.
  */
-export function useCloseEpoch() {
+export function usePrepareSettlement() {
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
   const toast = useTxToast();
 
-  const [stage, setStage] = useState<CloseStage>("idle");
+  const [stage, setStage] = useState<PrepareStage>("idle");
   const [error, setError] = useState<string | null>(null);
   const [lastTx, setLastTx] = useState<Hex | null>(null);
 
-  const closeEpoch = useCallback(
+  const prepare = useCallback(
     async (epochId: bigint): Promise<boolean> => {
       if (!publicClient || epochId <= 0n) return false;
       setError(null);
       setLastTx(null);
       try {
-        setStage("closing");
-        toast.info("Closing epoch", `Sealing epoch #${epochId} for settlement.`);
+        setStage("preparing");
+        toast.info(
+          "Preparing settlement",
+          `Netting epoch #${epochId} over encrypted intents.`,
+        );
         const tx = await writeContractAsync({
-          address: addresses.epochManager,
-          abi: epochManagerAbi,
-          functionName: "closeEpoch",
+          address: addresses.settlementEngine,
+          abi: settlementEngineAbi,
+          functionName: "prepareSettlement",
           args: [epochId],
         });
         setLastTx(tx);
@@ -43,16 +45,16 @@ export function useCloseEpoch() {
 
         setStage("done");
         toast.success(
-          "Epoch closed",
-          `Epoch #${epochId} is sealed — settlement can begin.`,
+          "Settlement prepared",
+          "Aggregate residual revealed — awaiting operator finalize.",
         );
         return true;
       } catch (err) {
         const message =
-          err instanceof Error ? err.message.split("\n")[0] : "Close failed";
+          err instanceof Error ? err.message.split("\n")[0] : "Prepare failed";
         setError(message);
         setStage("error");
-        toast.error("Close failed", message);
+        toast.error("Prepare failed", message);
         return false;
       }
     },
@@ -66,9 +68,9 @@ export function useCloseEpoch() {
   }, []);
 
   return {
-    closeEpoch,
+    prepare,
     stage,
-    isPending: stage === "closing",
+    isPending: stage === "preparing",
     error,
     lastTx,
     reset,

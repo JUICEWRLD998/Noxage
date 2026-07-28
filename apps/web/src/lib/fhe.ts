@@ -1,6 +1,7 @@
 "use client";
 
 import { toHex, type Address, type Hex, type WalletClient } from "viem";
+import type { Eip1193Provider } from "@/lib/wallet";
 
 // The Zama relayer SDK touches window / Worker / wasm, so it must only ever be
 // imported dynamically on the client — never at module top level in anything the
@@ -38,33 +39,50 @@ interface FhevmInstance {
     startTimestamp: number,
     durationDays: number,
   ) => Promise<Record<string, bigint | boolean | string>>;
+  publicDecrypt: (
+    handles: string[],
+  ) => Promise<{
+    clearValues: Record<string, bigint | boolean | string>;
+    decryptionProof: Hex;
+  }>;
 }
 
 let instancePromise: Promise<FhevmInstance> | null = null;
+let boundProvider: Eip1193Provider | null = null;
+
+function resolveProvider(explicit?: Eip1193Provider): Eip1193Provider {
+  if (explicit) return explicit;
+  if (typeof window !== "undefined") {
+    const eth = (window as unknown as { ethereum?: Eip1193Provider }).ethereum;
+    if (eth) return eth;
+  }
+  throw new Error("No injected Ethereum provider found");
+}
 
 /**
  * Lazily initialize a single relayer instance. Loads ~5MB of wasm on first call.
  * Runs single-threaded (thread: 1) so we don't need COOP/COEP headers, which can
  * break wallet popups.
+ *
+ * Pass the active wallet provider so FHE uses the same injected wallet the user
+ * connected with.
  */
-export function getFheInstance(): Promise<FhevmInstance> {
-  if (instancePromise) return instancePromise;
+export function getFheInstance(provider?: Eip1193Provider): Promise<FhevmInstance> {
+  const network = resolveProvider(provider);
+  if (instancePromise && boundProvider === network) return instancePromise;
 
+  boundProvider = network;
   instancePromise = (async () => {
     if (typeof window === "undefined") {
       throw new Error("FHE client can only run in the browser");
-    }
-    const eth = (window as unknown as { ethereum?: object }).ethereum;
-    if (!eth) {
-      throw new Error("No injected Ethereum provider found");
     }
 
     const sdk = await import("@zama-fhe/relayer-sdk/web");
     await sdk.initSDK({ thread: 1 });
     const instance = await sdk.createInstance({
       ...sdk.SepoliaConfig,
-      // window.ethereum is an EIP-1193 provider; the SDK accepts it or an RPC URL.
-      network: eth as Parameters<typeof sdk.createInstance>[0]["network"],
+      // Injected provider from the wallet context, or window.ethereum as fallback.
+      network: network as Parameters<typeof sdk.createInstance>[0]["network"],
     });
     return instance as unknown as FhevmInstance;
   })();
@@ -72,6 +90,7 @@ export function getFheInstance(): Promise<FhevmInstance> {
   // Reset on failure so a later attempt can retry (e.g. user unlocks wallet).
   instancePromise.catch(() => {
     instancePromise = null;
+    boundProvider = null;
   });
 
   return instancePromise;
@@ -102,8 +121,9 @@ export async function encryptIntent(
   bookAddress: Address,
   userAddress: Address,
   intent: IntentPlain,
+  provider?: Eip1193Provider,
 ): Promise<EncryptedIntent> {
-  const instance = await getFheInstance();
+  const instance = await getFheInstance(provider);
   const input = instance.createEncryptedInput(bookAddress, userAddress);
   input.add8(intent.side);
   input.add64(intent.amount);
@@ -133,6 +153,7 @@ export async function decryptHandles(
   requests: DecryptRequest[],
   userAddress: Address,
   walletClient: WalletClient,
+  provider?: Eip1193Provider,
 ): Promise<Record<Hex, bigint>> {
   const results: Record<Hex, bigint> = {};
 
@@ -146,7 +167,7 @@ export async function decryptHandles(
   });
   if (live.length === 0) return results;
 
-  const instance = await getFheInstance();
+  const instance = await getFheInstance(provider);
   const { publicKey, privateKey } = instance.generateKeypair();
 
   const startTimestamp = Math.floor(Date.now() / 1000);
@@ -202,13 +223,36 @@ export async function decryptHandle(
   tokenAddress: Address,
   userAddress: Address,
   walletClient: WalletClient,
+  provider?: Eip1193Provider,
 ): Promise<bigint> {
   const results = await decryptHandles(
     [{ handle, contractAddress: tokenAddress }],
     userAddress,
     walletClient,
+    provider,
   );
   return results[handle];
+}
+
+/** Public KMS decrypt for handles marked publicly decryptable on-chain. */
+export async function publicDecryptHandles(
+  handles: Hex[],
+  provider?: Eip1193Provider,
+): Promise<{
+  clearValues: Record<Hex, bigint>;
+  decryptionProof: Hex;
+}> {
+  const instance = await getFheInstance(provider);
+  const result = await instance.publicDecrypt(handles);
+  const clearValues: Record<Hex, bigint> = {};
+  for (const handle of handles) {
+    const value = result.clearValues[handle];
+    if (typeof value !== "bigint") {
+      throw new Error(`Public decrypt returned unexpected type for ${handle}`);
+    }
+    clearValues[handle] = value;
+  }
+  return { clearValues, decryptionProof: result.decryptionProof };
 }
 
 /** A confidential balance handle of all-zeros means "no balance yet". */

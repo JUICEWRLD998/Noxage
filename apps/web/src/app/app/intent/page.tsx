@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount } from "@/lib/wallet";
 import {
   Badge,
   Button,
@@ -13,6 +13,8 @@ import {
   TokenAmountField,
 } from "@/components";
 import { useEpochStatus } from "@/hooks/useEpochStatus";
+import { useOpenEpoch } from "@/hooks/useOpenEpoch";
+import { useOperator } from "@/hooks/useOperator";
 import { useSubmitIntent } from "@/hooks/useSubmitIntent";
 import { MVP_PAIR_LABEL, TOKENS } from "@/lib/contracts";
 import { parseAmount } from "@/lib/format";
@@ -27,6 +29,8 @@ export default function IntentPage() {
   const { isConnected } = useAccount();
   const epoch = useEpochStatus();
   const submit = useSubmitIntent();
+  const operator = useOperator();
+  const openEpoch = useOpenEpoch();
 
   const [side, setSide] = useState<Side>(1);
   const [amount, setAmount] = useState("");
@@ -88,20 +92,49 @@ export default function IntentPage() {
           {/* Epoch gate */}
           {epoch.isLoading ? (
             <Skeleton width="100%" height="1.4em" />
-          ) : epoch.hasOpenEpoch ? (
-            <div className={styles.epochRow}>
-              <Badge variant="accent">Epoch #{epoch.activeEpochId?.toString()} open</Badge>
-              <span className={styles.epochMeta}>
-                {epoch.intentCount} sealed
-              </span>
+          ) : epoch.error ? (
+            <div className={styles.gate} role="alert">
+              <Badge variant="danger">Epoch unavailable</Badge>
+              <p className={styles.gateText}>
+                Couldn’t reach the epoch manager, so the epoch state is unknown.
+                Retrying automatically — check your connection if this persists.
+              </p>
             </div>
+          ) : epoch.hasOpenEpoch ? (
+            <>
+              <div className={styles.epochRow}>
+                <Badge variant="accent">Epoch #{epoch.activeEpochId?.toString()} open</Badge>
+                <span className={styles.epochMeta}>
+                  {epoch.intentCount} sealed
+                </span>
+              </div>
+              <p className={styles.gateText}>
+                On Sepolia, matching opposing buy/sell sizes (perfect net) is the
+                most reliable path to a settled epoch.
+              </p>
+            </>
           ) : (
             <div className={styles.gate}>
               <Badge variant="warning">No open epoch</Badge>
               <p className={styles.gateText}>
-                Intents can only be sealed while an epoch is open. Wait for the
-                next epoch to open, then submit.
+                Intents can only be sealed while an epoch is open.
               </p>
+              {operator.isOperator && (
+                <Button
+                  variant="accent"
+                  size="sm"
+                  loading={openEpoch.isPending}
+                  onClick={async () => {
+                    const ok = await openEpoch.openEpoch();
+                    if (ok) void epoch.refetch();
+                  }}
+                >
+                  Open epoch
+                </Button>
+              )}
+              {openEpoch.error && (
+                <p className={styles.gateText}>{openEpoch.error}</p>
+              )}
             </div>
           )}
 

@@ -6,7 +6,7 @@ import {
   useAccount,
   usePublicClient,
   useWriteContract,
-} from "wagmi";
+} from "@/lib/wallet";
 import { confidentialTokenAbi, mockErc20Abi } from "@/lib/abis";
 import { TOKENS, type TokenKey } from "@/lib/contracts";
 import { useTxToast } from "./useTxToast";

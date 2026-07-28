@@ -3,10 +3,11 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getAbiItem, type Hex } from "viem";
-import { useAccount, usePublicClient, useWalletClient } from "wagmi";
+import { useAccount, usePublicClient, useWalletClient } from "@/lib/wallet";
 import { fillLedgerAbi } from "@/lib/abis";
 import { addresses, INTENT_BOOK_DEPLOY_BLOCK } from "@/lib/contracts";
 import { decryptHandles } from "@/lib/fhe";
+import { getConnectorProvider } from "@/lib/wallet-provider";
 import { useTxToast } from "./useTxToast";
 
 const fillCreditedEvent = getAbiItem({
@@ -44,7 +45,7 @@ type DecryptStage = "idle" | "decrypting" | "done" | "error";
  * re-asks for a signature it already has.
  */
 export function useFills() {
-  const { address } = useAccount();
+  const { address, connector } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
   const toast = useTxToast();
@@ -116,6 +117,7 @@ export function useFills() {
       try {
         toast.info("Decrypting fill", "Sign once to reveal your fill legs.");
         const { handles } = fill;
+        const provider = await getConnectorProvider(connector);
         const results = await decryptHandles(
           [
             { handle: handles.recvBase, contractAddress: addresses.fillLedger },
@@ -125,6 +127,7 @@ export function useFills() {
           ],
           address,
           walletClient,
+          provider,
         );
         const legs: FillLeg = {
           recvBase: results[handles.recvBase],
@@ -145,7 +148,7 @@ export function useFills() {
         return null;
       }
     },
-    [address, walletClient, fills, decrypted, toast],
+    [address, connector, walletClient, fills, decrypted, toast],
   );
 
   return {

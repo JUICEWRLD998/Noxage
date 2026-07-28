@@ -68,7 +68,6 @@
   content: "";
   position: absolute;
   inset: -30%;
-  will-change: transform;
   filter: blur(var(--blur-lg));
   background-repeat: no-repeat;
 }
@@ -77,37 +76,10 @@
   background-image:
     radial-gradient(38% 42% at 22% 28%, oklch(0.62 0.19 285 / 0.4), transparent 70%),
     radial-gradient(34% 38% at 78% 20%, oklch(0.55 0.19 285 / 0.28), transparent 70%);
-  animation: meshDriftA 24s var(--ease-in-out) infinite alternate;
 }
 
 .mesh::after {
   background-image:
     radial-gradient(40% 44% at 68% 78%, oklch(0.5 0.14 300 / 0.3), transparent 70%),
     radial-gradient(30% 34% at 30% 82%, oklch(0.62 0.16 250 / 0.24), transparent 70%);
-  animation: meshDriftB 30s var(--ease-in-out) infinite alternate;
-}
-
-@keyframes meshDriftA {
-  from {
-    transform: translate3d(-4%, -3%, 0) scale(1);
-  }
-  to {
-    transform: translate3d(6%, 5%, 0) scale(1.15);
-  }
-}
-
-@keyframes meshDriftB {
-  from {
-    transform: translate3d(3%, 4%, 0) scale(1.1);
-  }
-  to {
-    transform: translate3d(-5%, -6%, 0) scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mesh::before,
-  .mesh::after {
-    animation: none;
-  }
 }

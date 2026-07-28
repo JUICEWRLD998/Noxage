@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { getAddress, isAddress, type Address, type Hex } from "viem";
-import { useAccount, usePublicClient, useWalletClient } from "wagmi";
+import { useAccount, usePublicClient, useWalletClient } from "@/lib/wallet";
 import {
   Badge,
   Button,
@@ -19,6 +19,7 @@ import { confidentialTokenAbi } from "@/lib/abis";
 import { TOKENS, TOKEN_LIST, type TokenKey } from "@/lib/contracts";
 import { decryptHandle, isZeroHandle } from "@/lib/fhe";
 import { formatAmount, truncateHex } from "@/lib/format";
+import { getConnectorProvider } from "@/lib/wallet-provider";
 import styles from "./auditor.module.css";
 
 /** Per-token observer grant/revoke card. */
@@ -67,6 +68,8 @@ function GrantCard({ tokenKey }: { tokenKey: TokenKey }) {
         <h3 className={styles.cardTitle}>{confSymbol}</h3>
         {obs.isLoading ? (
           <Skeleton width="110px" height="1.4em" />
+        ) : obs.queryError ? (
+          <Badge variant="danger">Status unknown</Badge>
         ) : obs.hasObserver ? (
           <Badge variant="accent">Observer active</Badge>
         ) : (
@@ -78,6 +81,10 @@ function GrantCard({ tokenKey }: { tokenKey: TokenKey }) {
         <span className={styles.observerLabel}>Current observer</span>
         {obs.isLoading ? (
           <Skeleton width="130px" height="1.2em" />
+        ) : obs.queryError ? (
+          <span className={styles.errorText} role="alert">
+            Couldn’t read observer state — retrying automatically.
+          </span>
         ) : obs.hasObserver && obs.observer ? (
           <span className={styles.mono} title={obs.observer}>
             {truncateHex(obs.observer, 8, 6)}
@@ -167,7 +174,7 @@ type ViewState =
   | { status: "error"; message: string };
 
 export default function AuditorPage() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, connector } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
 
@@ -215,11 +222,13 @@ export default function AuditorPage() {
     }
 
     try {
+      const provider = await getConnectorProvider(connector);
       const value = await decryptHandle(
         handle,
         token.confidential,
         address,
         walletClient,
+        provider,
       );
       setViewState({ status: "decrypted", tokenKey, target, value });
     } catch {

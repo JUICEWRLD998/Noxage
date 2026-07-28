@@ -3,13 +3,15 @@ import { keccak256, toBytes, type Address } from "viem";
 /** Ethereum Sepolia — the only network Noxage runs on. */
 export const SEPOLIA_CHAIN_ID = 11155111;
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
+
 function required(name: string, value: string | undefined): Address {
   if (!value) {
     // Surfaced at runtime in the UI rather than crashing the build; a missing
     // address means the deploy step for that contract has not been run yet.
     console.warn(`[noxage] missing env ${name}`);
   }
-  return (value ?? "0x0000000000000000000000000000000000000000") as Address;
+  return (value ?? ZERO_ADDRESS) as Address;
 }
 
 export const addresses = {
@@ -47,6 +49,15 @@ export const addresses = {
     process.env.NEXT_PUBLIC_NOXAGE_SETTLEMENT_EXECUTOR_ADDRESS,
   ),
 } as const;
+
+/**
+ * Names of contracts whose env address is missing (zero address). Non-empty
+ * means the build is misconfigured — the app shell shows a blocking notice
+ * instead of letting reads silently return nothing.
+ */
+export const MISSING_ADDRESSES: string[] = Object.entries(addresses)
+  .filter(([, addr]) => addr === ZERO_ADDRESS)
+  .map(([name]) => name);
 
 /**
  * Sepolia block in which NoxageIntentBook

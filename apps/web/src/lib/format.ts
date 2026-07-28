@@ -1,5 +1,7 @@
 import { formatUnits } from "viem";
 
+export { truncateHex } from "./hex";
+
 /**
  * Insert en-US thousands separators into a bigint's decimal string without
  * round-tripping through Number (which loses precision above 2^53).
@@ -27,12 +29,6 @@ export function formatAmount(
   const trimmedFrac = frac.slice(0, maxFractionDigits).replace(/0+$/, "");
   const wholeGrouped = groupDigits(whole);
   return trimmedFrac ? `${wholeGrouped}.${trimmedFrac}` : wholeGrouped;
-}
-
-/** 0xabc1…def2 — for addresses and tx hashes. */
-export function truncateHex(value: string, lead = 6, tail = 4): string {
-  if (value.length <= lead + tail + 2) return value;
-  return `${value.slice(0, lead)}…${value.slice(-tail)}`;
 }
 
 /** mm:ss countdown from a number of seconds remaining (clamped at 0). */

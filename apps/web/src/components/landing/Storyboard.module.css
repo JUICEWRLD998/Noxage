@@ -1,0 +1,197 @@
+/* --- Stage --- */
+
+.stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+}
+
+/* --- Beat layout --- */
+
+.beat {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  align-items: center;
+}
+
+@media (max-width: 48rem) {
+  .beat {
+    grid-template-columns: 1fr;
+  }
+}
+
+.beatText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.step {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  color: var(--accent);
+  letter-spacing: var(--tracking-wide);
+}
+
+.beatTitle {
+  font-size: var(--fs-step-3);
+}
+
+.beatBody {
+  color: var(--text-secondary);
+  max-width: 44ch;
+}
+
+.beatVisual {
+  display: flex;
+  justify-content: center;
+}
+
+/* --- Seal visual --- */
+
+.sealCard {
+  width: min(100%, 22rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--intent-sealed-glow);
+}
+
+.sealRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-4);
+  font-size: var(--fs-step--1);
+}
+
+.sealLabel {
+  color: var(--text-muted);
+}
+
+.sealValue {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.sealSealed {
+  font-family: var(--font-mono);
+  color: var(--noxage-private);
+  letter-spacing: 0.2em;
+}
+
+.sealBadge {
+  align-self: flex-start;
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--badge-private-bg);
+  color: var(--badge-private-fg);
+  font-size: var(--fs-step--1);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+/* --- Net visual --- */
+
+.netFrame {
+  width: min(100%, 22rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--border-strong);
+  background: var(--surface-inset);
+}
+
+.netLabel {
+  font-size: var(--fs-step--1);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.netFlows {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.netFlow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.netBuy {
+  color: var(--noxage-settled);
+}
+
+.netSell {
+  color: var(--noxage-danger-mev);
+}
+
+.netCancel {
+  color: var(--accent);
+  font-size: var(--fs-step-2);
+}
+
+.netCaption {
+  font-size: var(--fs-step--1);
+  color: var(--text-secondary);
+}
+
+/* --- Settle visual --- */
+
+.settleSplit {
+  width: min(100%, 24rem);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+.settlePrivate,
+.settlePublic {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.settlePrivate {
+  background: var(--accent-muted);
+}
+
+.settlePublic {
+  background: var(--surface-inset);
+}
+
+.settleTag {
+  font-size: var(--fs-step--1);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-muted);
+}
+
+.settleHash {
+  font-family: var(--font-mono);
+  font-size: var(--fs-step--1);
+  color: var(--noxage-public-rail);
+}
+
+.settleHint {
+  font-size: var(--fs-step--1);
+  color: var(--text-faint);
+}

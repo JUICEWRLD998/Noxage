@@ -1,6 +1,6 @@
 "use client";
 
-import { useReadContract } from "wagmi";
+import { useReadContract } from "@/lib/wallet";
 import { epochManagerAbi, EpochStatus } from "@/lib/abis";
 import { addresses } from "@/lib/contracts";
 

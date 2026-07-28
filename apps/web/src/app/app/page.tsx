@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useAccount } from "wagmi";
-import { Badge, Card, PageHeader, Stat } from "@/components";
+import { useAccount } from "@/lib/wallet";
+import { Badge, Button, Card, PageHeader, Skeleton, Stat } from "@/components";
 import { useEpochStatus } from "@/hooks/useEpochStatus";
+import { useOpenEpoch } from "@/hooks/useOpenEpoch";
+import { useOperator } from "@/hooks/useOperator";
 import { EpochStatus } from "@/lib/abis";
 import styles from "./overview.module.css";
 
@@ -17,7 +19,10 @@ const STATUS_LABEL: Record<EpochStatus, string> = {
 
 export default function AppOverview() {
   const { isConnected } = useAccount();
-  const { hasOpenEpoch, activeEpochId, status, intentCount } = useEpochStatus();
+  const { hasOpenEpoch, activeEpochId, status, intentCount, isLoading, error, refetch } =
+    useEpochStatus();
+  const operator = useOperator();
+  const openEpoch = useOpenEpoch();
 
   return (
     <div>
@@ -70,18 +75,46 @@ export default function AppOverview() {
 
       <div className={styles.statsRow}>
         <Card>
-          <div className={styles.stats}>
-            <Stat
-              label="Open epoch"
-              value={hasOpenEpoch ? `#${activeEpochId?.toString()}` : "None"}
-            />
-            <Stat label="Status" value={STATUS_LABEL[status] ?? "—"} />
-            <Stat label="Sealed intents" value={intentCount.toString()} />
-          </div>
+          {isLoading ? (
+            <div className={styles.stats} aria-busy="true">
+              <Skeleton width="7rem" height="3.25rem" />
+              <Skeleton width="7rem" height="3.25rem" />
+              <Skeleton width="7rem" height="3.25rem" />
+            </div>
+          ) : error ? (
+            <p className={styles.hint} role="alert">
+              Couldn’t reach the epoch manager. Retrying automatically.
+            </p>
+          ) : (
+            <div className={styles.stats}>
+              <Stat
+                label="Open epoch"
+                value={hasOpenEpoch ? `#${activeEpochId?.toString()}` : "None"}
+              />
+              <Stat label="Status" value={STATUS_LABEL[status] ?? "—"} />
+              <Stat label="Sealed intents" value={intentCount.toString()} />
+            </div>
+          )}
           {!isConnected && (
             <p className={styles.hint}>
               Connect a wallet on Sepolia to start.
             </p>
+          )}
+          {isConnected && !hasOpenEpoch && operator.isOperator && (
+            <div className={styles.operatorRow}>
+              <p className={styles.hint}>No epoch is open.</p>
+              <Button
+                variant="accent"
+                size="sm"
+                loading={openEpoch.isPending}
+                onClick={async () => {
+                  const ok = await openEpoch.openEpoch();
+                  if (ok) void refetch();
+                }}
+              >
+                Open epoch
+              </Button>
+            </div>
           )}
         </Card>
       </div>

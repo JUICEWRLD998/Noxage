@@ -4,8 +4,9 @@ import { useState } from "react";
 import {
   useAccount,
   usePublicClient,
+  useReadContract,
   useWriteContract,
-} from "wagmi";
+} from "@/lib/wallet";
 import {
   Badge,
   Button,
@@ -40,6 +41,14 @@ export default function ShieldPage() {
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
   const [faucetPending, setFaucetPending] = useState(false);
+
+  // Per-call mint size, shown next to the faucet button so first-time users
+  // know what to expect.
+  const faucetAmount = useReadContract({
+    address: token.mock,
+    abi: mockErc20Abi,
+    functionName: "FAUCET_AMOUNT",
+  }).data as bigint | undefined;
 
   const parsedAmount = parseAmount(amount, token.decimals);
   const insufficient =
@@ -127,6 +136,10 @@ export default function ShieldPage() {
             <div className={styles.balanceValue}>
               {pub.isLoading ? (
                 <Skeleton width="90px" height="1.2em" />
+              ) : pub.error ? (
+                <span className={styles.errorText} role="alert">
+                  Couldn’t load
+                </span>
               ) : (
                 formatAmount(pub.balance ?? 0n, token.decimals)
               )}
@@ -162,7 +175,11 @@ export default function ShieldPage() {
           )}
 
           <div className={styles.faucet}>
-            <span className={styles.muted}>Need test tokens?</span>
+            <span className={styles.muted}>
+              Need test tokens?
+              {faucetAmount !== undefined &&
+                ` Mints ${formatAmount(faucetAmount, token.decimals, 0)} ${token.symbol} per call.`}
+            </span>
             <Button
               variant="ghost"
               size="sm"
@@ -172,6 +189,18 @@ export default function ShieldPage() {
               Faucet {token.symbol}
             </Button>
           </div>
+
+          <p className={styles.muted}>
+            Transactions also need Sepolia ETH for gas — grab some from the{" "}
+            <a
+              href="https://sepoliafaucet.com"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Sepolia faucet
+            </a>
+            .
+          </p>
         </Card>
 
         {/* Shield / Unshield */}
@@ -214,6 +243,7 @@ export default function ShieldPage() {
               <TxHashLink hash={shield.lastTx} label="Shielded" />
             </div>
           )}
+          {shield.error && <p className={styles.errorText}>{shield.error}</p>}
 
           <div className={styles.divider} />
 

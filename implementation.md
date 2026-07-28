@@ -399,6 +399,8 @@ User decrypts own fill (auditor optional)
 - [x] Uniswap contracts not forked/modified  
 - [x] Threat model notes what remains public (`docs/THREAT-MODEL.md`)  
 
+**Sepolia testing note:** contracts are deployed and tests are green (31/31), but **only perfect-net epochs (residual = 0) reliably reach `Settled` on Sepolia** today — non-zero residual swaps fail for environmental reasons (SwapRouter02 ABI mismatch, no mWETH/mUSDC pool, empty engine inventory). See README “Known Sepolia limitation”. Operator scripts: `ops:open-epoch:sepolia`, `ops:finalize:sepolia`.
+
 ---
 
 ### Phase 5 — Product frontend: wallet + shield + intent  
@@ -407,8 +409,8 @@ User decrypts own fill (auditor optional)
 
 **Tasks**
 
-1. wagmi config: Sepolia only (hard-gate wrong network with clear UI).  
-2. Connect wallet flow (injected + WalletConnect).  
+1. Sepolia-only wallet config with hard-gate wrong network (`NetworkGuard`).
+2. Connect wallet flow (injected browser wallet — MetaMask, Rabby, etc.).
 3. `/app/shield` — TokenAmountField, balances (public + confidential decrypt), Shield / Unshield CTAs.  
 4. `/app/intent` — pair, side, amount, optional limit; encrypt + submit; SealedIntentCard success state.  
 5. Loading / error / empty states for every async step (no silent failures).  
@@ -422,7 +424,7 @@ User decrypts own fill (auditor optional)
 - [x] Fully keyboard accessible; focus rings present (global `:focus-visible`, `aria-pressed`/`fieldset` semantics)  
 - [x] Wrong network hard-gated by a blocking, focus-trapped dialog (`NetworkGuard`)  
 
-**Deviation:** wallet connect is **injected-only**. The WalletConnect connector's barrel import pulls `@x402/base-account` transitively and breaks the production build; documented in `lib/wagmi.ts`.
+**Configuration:** connect via injected browser wallet only (no WalletConnect relay). Operator scripts for epoch open + settlement finalize live in `packages/contracts` (`ops:open-epoch:sepolia`, `ops:finalize:sepolia`).
 
 ---
 

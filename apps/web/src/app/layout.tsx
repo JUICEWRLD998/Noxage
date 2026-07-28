@@ -1,7 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
-import { MotionProvider } from "@/components/providers/MotionProvider";
-import { Web3Provider } from "@/components/providers/Web3Provider";
 import "@/styles/globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -22,10 +20,48 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+const SITE_NAME = "Noxage";
+const TITLE = "Noxage — Public liquidity. Private strategy.";
+const DESCRIPTION =
+  "Confidential intent settlement for open DeFi. Seal size and direction with on-chain encryption, net opposing flow per epoch, settle only the residual on unmodified Uniswap.";
+
 export const metadata: Metadata = {
-  title: "Noxage — Public liquidity. Private strategy.",
-  description:
-    "Confidential intent settlement for open DeFi. Encrypt size and direction, net in TEE, settle residual on Uniswap. Built on iExec Nox.",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  ),
+  title: {
+    default: TITLE,
+    template: `%s — ${SITE_NAME}`,
+  },
+  description: DESCRIPTION,
+  keywords: [
+    "confidential DeFi",
+    "private trading",
+    "encrypted intents",
+    "MEV protection",
+    "ERC-7984",
+    "FHEVM",
+    "Uniswap",
+    "Sepolia",
+  ],
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    siteName: SITE_NAME,
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+};
+
+export const viewport: Viewport = {
+  // Matches --surface-0 (dark-first); light theme is a runtime override.
+  themeColor: "#0b0a10",
+  colorScheme: "dark light",
 };
 
 const noFoucThemeScript = `
@@ -52,11 +88,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: noFoucThemeScript }} />
       </head>
-      <body>
-        <Web3Provider>
-          <MotionProvider>{children}</MotionProvider>
-        </Web3Provider>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

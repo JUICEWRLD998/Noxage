@@ -2,10 +2,11 @@
 
 import { useCallback, useState } from "react";
 import type { Hex } from "viem";
-import { useAccount, useReadContract, useWalletClient } from "wagmi";
+import { useAccount, useReadContract, useWalletClient } from "@/lib/wallet";
 import { confidentialTokenAbi, mockErc20Abi } from "@/lib/abis";
 import { TOKENS, type TokenKey } from "@/lib/contracts";
 import { decryptHandle, isZeroHandle } from "@/lib/fhe";
+import { getConnectorProvider } from "@/lib/wallet-provider";
 
 /** Public ERC-20 balance of the connected account for a token. */
 export function usePublicBalance(tokenKey: TokenKey) {
@@ -35,7 +36,7 @@ export function usePublicBalance(tokenKey: TokenKey) {
  * decrypts (which prompts a wallet signature).
  */
 export function useConfidentialBalance(tokenKey: TokenKey) {
-  const { address } = useAccount();
+  const { address, connector } = useAccount();
   const { data: walletClient } = useWalletClient();
   const token = TOKENS[tokenKey];
 
@@ -59,11 +60,13 @@ export function useConfidentialBalance(tokenKey: TokenKey) {
     setDecrypting(true);
     setDecryptError(null);
     try {
+      const provider = await getConnectorProvider(connector);
       const value = await decryptHandle(
         handle,
         token.confidential,
         address,
         walletClient,
+        provider,
       );
       setClear(value);
     } catch (err) {
@@ -73,7 +76,7 @@ export function useConfidentialBalance(tokenKey: TokenKey) {
     } finally {
       setDecrypting(false);
     }
-  }, [address, walletClient, handle, token.confidential]);
+  }, [address, connector, walletClient, handle, token.confidential]);
 
   // Reset the revealed cleartext when the underlying handle changes.
   const reset = useCallback(() => {

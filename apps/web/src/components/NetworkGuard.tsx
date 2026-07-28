@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, type KeyboardEvent } from "react";
-import { useAccount, useSwitchChain } from "wagmi";
-import { sepolia } from "wagmi/chains";
+import { SEPOLIA_CHAIN_ID } from "@/lib/contracts";
+import { useAccount, useSwitchChain } from "@/lib/wallet";
 import { Button } from "./Button";
 import styles from "./NetworkGuard.module.css";
 
@@ -10,7 +10,7 @@ import styles from "./NetworkGuard.module.css";
 export function NetworkBadge() {
   const { isConnected, chainId } = useAccount();
   if (!isConnected) return null;
-  const onSepolia = chainId === sepolia.id;
+  const onSepolia = chainId === SEPOLIA_CHAIN_ID;
   return (
     <span
       className={`${styles.badge} ${onSepolia ? styles.ok : styles.wrong}`}
@@ -33,9 +33,8 @@ export function NetworkGuardBanner() {
   const { switchChain, isPending } = useSwitchChain();
 
   const dialogRef = useRef<HTMLDivElement>(null);
-  const blocked = isConnected && chainId !== sepolia.id;
+  const blocked = isConnected && chainId !== SEPOLIA_CHAIN_ID;
 
-  // Move focus into the overlay and lock body scroll while it is shown.
   useEffect(() => {
     if (!blocked) return;
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -50,10 +49,8 @@ export function NetworkGuardBanner() {
 
   if (!blocked) return null;
 
-  // wagmi only resolves `chain` for configured chains; fall back to the id.
   const wrongChainName = chain?.name ?? `an unsupported network (id ${chainId})`;
 
-  // Keep Tab cycling inside the dialog (the switch button is the only stop).
   const trapFocus = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "Tab") return;
     const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(
@@ -86,7 +83,7 @@ export function NetworkGuardBanner() {
           variant="accent"
           size="sm"
           loading={isPending}
-          onClick={() => switchChain({ chainId: sepolia.id })}
+          onClick={() => switchChain({ chainId: SEPOLIA_CHAIN_ID })}
         >
           Switch to Sepolia
         </Button>
@@ -114,7 +111,7 @@ export function NetworkGuardBanner() {
             variant="accent"
             size="lg"
             loading={isPending}
-            onClick={() => switchChain({ chainId: sepolia.id })}
+            onClick={() => switchChain({ chainId: SEPOLIA_CHAIN_ID })}
           >
             Switch to Sepolia
           </Button>

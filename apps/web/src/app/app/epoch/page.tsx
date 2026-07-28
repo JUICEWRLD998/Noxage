@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useAccount, useReadContract } from "wagmi";
+import { useAccount, useReadContract } from "@/lib/wallet";
 import {
   Button,
   Card,
@@ -19,6 +19,10 @@ import {
 } from "@/components";
 import { useCloseEpoch } from "@/hooks/useCloseEpoch";
 import { useEpochStatus } from "@/hooks/useEpochStatus";
+import { useFinalizeSettlement } from "@/hooks/useFinalizeSettlement";
+import { useOpenEpoch } from "@/hooks/useOpenEpoch";
+import { useOperator } from "@/hooks/useOperator";
+import { usePrepareSettlement } from "@/hooks/usePrepareSettlement";
 import { useFills, type FillLeg } from "@/hooks/useFills";
 import { useSettlement, type ResidualSwap } from "@/hooks/useSettlement";
 import { epochManagerAbi, EpochStatus, SettlementStatus } from "@/lib/abis";
@@ -109,6 +113,10 @@ export default function EpochPage() {
 
   const fills = useFills();
   const close = useCloseEpoch();
+  const prepare = usePrepareSettlement();
+  const finalize = useFinalizeSettlement();
+  const operator = useOperator();
+  const openEpoch = useOpenEpoch();
 
   // 1s tick so the "Close epoch" affordance appears exactly when the window
   // expires (EpochClock ticks internally; this drives the page-level gate).
@@ -229,7 +237,29 @@ export default function EpochPage() {
       ) : latestId === 0n || viewedId === 0n ? (
         <EmptyState
           title="No epoch is open"
-          description="An operator opens epochs; check back shortly."
+          description={
+            operator.isOperator
+              ? "Open an epoch to start accepting sealed intents."
+              : "An operator opens epochs; check back shortly."
+          }
+          action={
+            operator.isOperator ? (
+              <Button
+                variant="accent"
+                size="sm"
+                loading={openEpoch.isPending}
+                onClick={async () => {
+                  const ok = await openEpoch.openEpoch();
+                  if (ok) {
+                    void active.refetch();
+                    void currentQuery.refetch();
+                  }
+                }}
+              >
+                Open epoch
+              </Button>
+            ) : undefined
+          }
         />
       ) : chainStatus === EpochStatus.None ? (
         <EmptyState
@@ -309,6 +339,74 @@ export default function EpochPage() {
                       : "The batch is sealed. Settlement prepares next: encrypted netting, then the residual (if any) swaps publicly."}
                   </p>
                 </>
+              )}
+              {uiStatus === "closed" &&
+                settlement.status === SettlementStatus.None && (
+                  <div className={styles.closeRow}>
+                    <p className={styles.muted}>
+                      Homomorphic netting is permissionless — anyone can run
+                      prepare once the epoch is closed.
+                    </p>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      loading={prepare.isPending}
+                      onClick={async () => {
+                        const ok = await prepare.prepare(viewedId);
+                        if (ok) void settlement.refetch();
+                      }}
+                    >
+                      {prepare.stage === "preparing"
+                        ? "Preparing…"
+                        : "Prepare settlement"}
+                    </Button>
+                  </div>
+                )}
+              {prepare.error && (
+                <p className={styles.errorText}>{prepare.error}</p>
+              )}
+              {prepare.stage === "done" && prepare.lastTx && (
+                <div className={styles.txRow}>
+                  <TxHashLink hash={prepare.lastTx} label="Prepared" />
+                </div>
+              )}
+              {settlement.status === SettlementStatus.Prepared && (
+                <div className={styles.closeRow}>
+                  <p className={styles.muted}>
+                    Residual handles are publicly decryptable. On Sepolia,
+                    perfect-net batches (matching buy/sell size) settle
+                    reliably.
+                  </p>
+                  {operator.isOperator ? (
+                    <Button
+                      variant="accent"
+                      size="sm"
+                      loading={finalize.isPending}
+                      onClick={async () => {
+                        const ok = await finalize.finalize(viewedId);
+                        if (ok) void settlement.refetch();
+                      }}
+                    >
+                      {finalize.stage === "decrypting"
+                        ? "Decrypting…"
+                        : finalize.stage === "finalizing"
+                          ? "Finalizing…"
+                          : "Finalize settlement"}
+                    </Button>
+                  ) : (
+                    <p className={styles.muted}>
+                      Connect the deployer wallet to finalize settlement.
+                    </p>
+                  )}
+                </div>
+              )}
+              {finalize.error && (
+                <p className={styles.errorText}>{finalize.error}</p>
+              )}
+              {finalize.stage === "done" && finalize.lastTx && (
+                <div className={styles.txRow}>
+                  <TxHashLink hash={finalize.lastTx} label="Finalized" />
+                </div>
               )}
               {settlement.error && (
                 <p className={styles.errorText}>
@@ -405,7 +503,7 @@ export default function EpochPage() {
           {uiStatus === "failed" && (
             <ErrorState
               title="Residual settlement failed"
-              description="Funds remain accounted; the operator can retry in a new epoch."
+              description="On Sepolia this usually means a non-zero residual could not swap publicly (no pool, router mismatch, or empty engine inventory). Perfect-net epochs — equal opposing buy/sell size — are the reliable test path. Funds remain accounted; retry in a new epoch."
               action={
                 settlement.finalizedTxHash ? (
                   <TxHashLink

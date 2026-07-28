@@ -263,6 +263,20 @@ export const epochManagerAbi = [
     inputs: [{ name: "epochId", type: "uint256" }],
     outputs: [],
   },
+  {
+    type: "function",
+    name: "openEpoch",
+    stateMutability: "nonpayable",
+    inputs: [],
+    outputs: [{ name: "epochId", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "owner",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address" }],
+  },
 ] as const;
 
 /** NoxageEpochManager status enum (None, Open, Closed, Settled, Failed). */
@@ -327,6 +341,35 @@ export const fillLedgerAbi = [
 ] as const;
 
 export const settlementEngineAbi = [
+  {
+    type: "function",
+    name: "prepareSettlement",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "epochId", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "finalizeSettlement",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "epochId", type: "uint256" },
+      { name: "residualBase", type: "uint64" },
+      { name: "buyHeavy", type: "bool" },
+      { name: "priceNum", type: "uint64" },
+      { name: "priceDen", type: "uint64" },
+      { name: "amountOutMinimum", type: "uint256" },
+      { name: "decryptionProof", type: "bytes" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "owner",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address" }],
+  },
   {
     type: "function",
     name: "settlementStatus",

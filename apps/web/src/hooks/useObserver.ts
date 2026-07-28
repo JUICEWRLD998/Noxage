@@ -7,7 +7,7 @@ import {
   usePublicClient,
   useReadContract,
   useWriteContract,
-} from "wagmi";
+} from "@/lib/wallet";
 import { confidentialTokenAbi } from "@/lib/abis";
 import { TOKENS, type TokenKey } from "@/lib/contracts";
 import { useTxToast } from "./useTxToast";

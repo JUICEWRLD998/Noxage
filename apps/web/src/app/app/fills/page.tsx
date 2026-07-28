@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { useAccount, usePublicClient, useWriteContract } from "@/lib/wallet";
 import {
   Badge,
   Button,
@@ -159,7 +159,15 @@ export default function FillsPage() {
         ) : fillsApi.fills.length === 0 ? (
           <EmptyState
             title="No fills yet"
-            description="Fills appear here after your epoch settles."
+            description="Fills appear here after your epoch settles. Shield tokens, seal an intent, and wait for the epoch to close."
+            action={
+              <Link
+                href="/app/shield"
+                className={buttonClassName("secondary", "sm")}
+              >
+                Shield tokens
+              </Link>
+            }
           />
         ) : (
           <div className={styles.fillsGrid}>

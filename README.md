@@ -19,7 +19,8 @@ Noxage is a confidential intent + batch-netting settlement layer for open DeFi. 
 | 4 | Netting + Uniswap residual settlement | ✅ **Complete** |
 | 5 | Product frontend: wallet + shield + intent | ✅ **Complete** |
 | 6 | Product frontend: epoch, settlement, fills, privacy split | ✅ **Complete** |
-| 7–8 | Marketing landing, docs, demo | Pending |
+| 7 | Marketing landing + SEO (hero, storyboard, OG, robots) | ✅ **Complete** |
+| 8 | Hardening, demo video, production deploy, feedback polish | Pending |
 
 See [`implementation.md`](./implementation.md) for the full build bible.
 
@@ -143,4 +144,4 @@ MIT (unless otherwise noted per package).
 
 ## Disclaimer
 
-Phase 0 includes a compile-only `NoxageHello` contract for toolchain validation. It is **not** production product logic and will be superseded by vault / intent / settlement contracts.
+Testnet only. Residual settlement with non-zero flow depends on Sepolia Uniswap liquidity and engine inventory — see **Known Sepolia limitation** above. Epoch open/finalize steps require the deployer operator wallet today; prepare/close are permissionless from the app.

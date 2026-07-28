@@ -2,10 +2,11 @@
 
 import { useCallback, useState } from "react";
 import { decodeEventLog, type Hex } from "viem";
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { useAccount, usePublicClient, useWriteContract } from "@/lib/wallet";
 import { intentBookAbi } from "@/lib/abis";
 import { addresses, MVP_PAIR_ID } from "@/lib/contracts";
 import { encryptIntent } from "@/lib/fhe";
+import { getConnectorProvider } from "@/lib/wallet-provider";
 import { useTxToast } from "./useTxToast";
 
 type IntentStage =
@@ -36,7 +37,7 @@ export interface SealedIntent {
 }
 
 export function useSubmitIntent() {
-  const { address } = useAccount();
+  const { address, connector } = useAccount();
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
   const toast = useTxToast();
@@ -54,11 +55,17 @@ export function useSubmitIntent() {
         // 1. Encrypt (side, amount, limit) client-side, bound to book + user.
         setStage("encrypting");
         toast.info("Sealing intent", "Encrypting size and direction locally.");
-        const enc = await encryptIntent(addresses.intentBook, address, {
-          side: input.side,
-          amount: input.amount,
-          limit: input.limit,
-        });
+        const provider = await getConnectorProvider(connector);
+        const enc = await encryptIntent(
+          addresses.intentBook,
+          address,
+          {
+            side: input.side,
+            amount: input.amount,
+            limit: input.limit,
+          },
+          provider,
+        );
 
         // 2. Submit the encrypted handles + proof. Pair & deadline are public.
         setStage("submitting");
@@ -121,7 +128,7 @@ export function useSubmitIntent() {
         return null;
       }
     },
-    [address, publicClient, writeContractAsync, toast],
+    [address, connector, publicClient, writeContractAsync, toast],
   );
 
   const reset = useCallback(() => {

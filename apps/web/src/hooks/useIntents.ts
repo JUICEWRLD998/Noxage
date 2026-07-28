@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getAbiItem } from "viem";
-import { useAccount, usePublicClient } from "wagmi";
+import { useAccount, usePublicClient } from "@/lib/wallet";
 import { intentBookAbi, type IntentStatus } from "@/lib/abis";
 import { addresses, INTENT_BOOK_DEPLOY_BLOCK } from "@/lib/contracts";
 
