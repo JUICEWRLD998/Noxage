@@ -1,0 +1,11 @@
+{
+  "network": "ethereum-sepolia",
+  "chainId": 11155111,
+  "contract": "ConfidentialPiggyBank",
+  "address": "0xd4fD45b4E76F7D4c14428F3e57c9dA729d1D8C8C",
+  "owner": "0x866df327dF560c24d2BA0f85aFd95cBff43cf06C",
+  "transactionHash": "0x678bd875ad791c95faec13d4d785ccb568c7143541bacd33eac3a73dd57f5955",
+  "blockNumber": 11377354,
+  "balanceHandle": "0x0000aa36a723006d8c4928a02417aca1e1d96b6c5a87d991e04607721059d189",
+  "deployedAt": "2026-07-29T18:50:38.206Z"
+}

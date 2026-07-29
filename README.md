@@ -177,6 +177,26 @@ See [docs/THREAT-MODEL.md](./docs/THREAT-MODEL.md) for the complete trust assump
 | `NoxageFillLedger` | Stores one encrypted fill record per intent with owner ACL access |
 | Web application | Handles wallet access, encryption, contract reads and writes, decryption, and transaction states |
 
+### iExec Nox Integration Status
+
+The current Sepolia MVP is designed for the iExec Nox use case, but the Nox
+runner is **not yet connected to the live settlement path**.
+
+- The browser encrypts and decrypts values through the Zama FHEVM relayer SDK.
+- The contracts use FHEVM encrypted types and access control to store intents,
+  net buy and sell flow, and protect balances and fills.
+- `prepareSettlement` performs the encrypted netting on-chain.
+- The Zama KMS reveals only the aggregate residual, which is verified by
+  `finalizeSettlement` before any public swap.
+- `NOX_GATEWAY_URL` and `NOX_RUNNER_URL` are reserved configuration values, but
+  no application or contract code currently calls them.
+
+The remaining Nox integration is to send each closed epoch to an attested Nox
+runner, return a verifiable settlement result, and require that result during
+finalization. Until that work is complete, the project should be described as a
+Zama FHEVM implementation prepared for Nox integration, not as a completed Nox
+runtime deployment.
+
 ---
 
 ## Key Features
@@ -391,6 +411,8 @@ Noxage is a **hackathon MVP**, not an audited production protocol. Use testnet a
 - Failed epochs do not currently have an on-chain retry or refund workflow.
 - Single-intent epochs can reveal the full intent through the public residual.
 - FHEVM, the relayer, KMS, RPC provider, wallet, and operator key remain trusted dependencies.
+- The iExec Nox gateway, attested runner, and result-verification path are not
+  yet wired into the deployed settlement flow.
 
 
 ---
