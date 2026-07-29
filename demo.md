@@ -7,7 +7,7 @@ public Ethereum settlement rails. The main proof is a perfectly matched epoch:
 two users submit equal opposing encrypted intents, the batch settles with zero
 public residual, and each user privately decrypts only their own fill.
 
-Target final length: **6 to 8 minutes**.
+Target final length: **about 4 minutes**.
 
 ## Wallet Setup
 
@@ -38,180 +38,147 @@ Target final length: **6 to 8 minutes**.
 10. Edit out long transaction and KMS waits, but retain the transaction
     submission and confirmed result.
 
-## Recording Phases
+## Four-Minute Recording Plan
 
-### Phase 1: Product Thesis and Access Controls
+Transaction confirmations and the 60-second epoch wait should be shortened
+during editing. Show each wallet request, then cut to the confirmed result.
 
-**Screen**
+### Phase 1: Introduce Noxage and the Two Roles
 
-1. Open the Noxage application overview.
-2. Briefly show the navigation: Shield, Intent, Epoch, Fills, and Auditor.
-3. With Wallet B on a network other than Sepolia, show the network-blocking
-   message.
-4. Switch Wallet B to Sepolia.
-5. Open the Epoch page and show that Wallet B has no operator-only Open or
-   Finalize control.
-6. Switch to Wallet A and show the operator-only Open epoch control.
-
-**Proof point**
-
-Noxage is Sepolia-gated and distinguishes permissionless user actions from
-operator-only lifecycle actions.
-
-### Phase 2: Shield and Decrypt a Confidential Balance
+**Time:** `0:00-0:25`
 
 **Screen**
 
-1. With Wallet A, open **Shield**.
-2. Faucet mUSDC and mWETH.
-3. Shield `10 mUSDC`, then shield `2 mWETH`.
-4. Show the public balance decreasing and the confidential balance displayed as
-   `●●●●`.
-5. Click **Decrypt**, sign the request, and show the correct confidential
-   balance.
+1. Open the Noxage overview and briefly show Shield, Intent, Epoch, Fills, and
+   Auditor.
+2. Show Wallet B blocked on the wrong network, then switch to Sepolia.
+3. Open Epoch with Wallet B and show that operator controls are hidden.
+4. Switch to Wallet A and show **Open epoch**.
 
-**Proof point**
+**Key message**
 
-Public ERC-20 value is wrapped into an encrypted on-chain balance. Reading the
-amount requires an explicit wallet signature.
+Noxage runs on Sepolia and separates normal users from the settlement operator.
 
-### Phase 3: Controlled Auditor Disclosure
+### Phase 2: Create and Read a Confidential Balance
 
-**Screen**
-
-1. With Wallet A, open **Auditor**.
-2. Under c-mUSDC, paste Wallet B's address and click **Grant access**.
-3. Return to **Shield** and shield another `1 mUSDC` to create a new balance
-   handle after the grant.
-4. Switch to Wallet B and open **Auditor**.
-5. In **Auditor view**, enter Wallet A's address, select c-mUSDC, click
-   **View as auditor**, sign, and show the decrypted balance.
-6. Switch to Wallet A, revoke Wallet B, and shield a small additional amount.
-7. Switch back to Wallet B and show that decrypting the new handle fails.
-
-**Proof point**
-
-Disclosure is explicit, token-specific, revocable, and applies to balance
-handles created while access is active.
-
-### Phase 4: Open an Epoch and Demonstrate Cancellation
+**Time:** `0:25-1:00`
 
 **Screen**
 
-1. With Wallet A, open **Epoch** and click **Open epoch**.
-2. Show the new epoch number and 60-second countdown.
-3. Open **Intent** and submit a small Buy mWETH intent for `0.1`, leaving the
-   limit blank.
-4. Open **Fills**, find that intent in **Intent history**, click **Cancel**, and
-   confirm its status becomes **Cancelled**.
+1. With Wallet A, open **Shield** and faucet mUSDC.
+2. Shield `10 mUSDC`.
+3. Show the public balance decreasing and the confidential balance as `●●●●`.
+4. Click **Decrypt**, sign, and show the amount.
 
-**Proof point**
+**Key message**
 
-Intents are accepted only during an open epoch and can be cancelled before the
-batch closes.
+The balance is encrypted on-chain and is revealed only after an approved wallet
+signature.
 
-### Phase 5: Submit Equal Opposing Encrypted Intents
+### Phase 3: Show Controlled Auditor Access
 
-**Screen**
-
-1. With Wallet A, submit:
-   - Side: **Buy mWETH**
-   - Amount: `1`
-   - Limit: blank
-2. With Wallet B, submit:
-   - Side: **Sell mWETH**
-   - Amount: `1`
-   - Limit: blank
-3. Show each sealed-intent receipt.
-4. Return to **Epoch** and show two active sealed intents. The cancelled intent
-   may remain in history, but must not participate in settlement.
-
-**Proof point**
-
-Direction, amount, and optional limit are encrypted in the browser. The chain
-records ciphertext handles and public batch metadata instead of plaintext
-trade details.
-
-### Phase 6: Permissionless Netting and Operator Finalization
+**Time:** `1:00-1:30`
 
 **Screen**
 
-1. Wait for the countdown to expire.
+1. With Wallet A, grant Wallet B observer access for c-mUSDC.
+2. Shield another `1 mUSDC` to create a new balance handle.
+3. With Wallet B, use **View as auditor** and show the decrypted balance.
+4. Return briefly to Wallet A and show the **Revoke** control.
+
+**Key message**
+
+A user can give a chosen wallet access to one confidential balance and can stop
+access to future balance updates.
+
+### Phase 4: Submit Two Matching Private Intents
+
+**Time:** `1:30-2:20`
+
+**Screen**
+
+1. With Wallet A, open a new epoch and show the countdown.
+2. Wallet A submits **Buy 1 mWETH**, with the limit blank.
+3. Wallet B submits **Sell 1 mWETH**, with the limit blank.
+4. Show both sealed-intent receipts.
+5. Return to Epoch and show two sealed intents.
+
+**Key message**
+
+The amount, side, and limit are encrypted before they reach the chain. The
+public can see the batch, but not each user's trade details.
+
+### Phase 5: Settle a Perfect Net
+
+**Time:** `2:20-3:15`
+
+**Screen**
+
+1. Cut to the expired epoch timer.
 2. With either wallet, click **Close epoch**.
-3. Show the epoch becoming **Closed**.
-4. With either wallet, click **Prepare settlement**.
-5. Show **Encrypted netting in progress** and the prepared state.
-6. Switch to Wallet A and click **Finalize settlement**.
-7. Approve the residual-decryption signature and settlement transaction.
-8. Show the epoch becoming **Settled**.
-9. Hold on the **Perfect net** result and the message that nothing touched the
-   public rail.
+3. Click **Prepare settlement** and show **Encrypted netting in progress**.
+4. Switch to Wallet A and click **Finalize settlement**.
+5. Approve the decrypt signature and settlement transaction.
+6. Show **Settled** and hold on **Perfect net**.
 
-**Proof point**
+**Key message**
 
-Closing and encrypted netting are permissionless. Finalization verifies the
-aggregate residual, and equal opposing flow settles without a public Uniswap
-swap.
+The equal buy and sell cancel inside the encrypted batch. There is no remaining
+amount to send to Uniswap.
 
-### Phase 7: Private Fills and On-Chain Persistence
+### Phase 6: Decrypt Private Fills and Close
+
+**Time:** `3:15-4:00`
 
 **Screen**
 
-1. With Wallet A, open **Fills**, locate the Buy intent, click **Decrypt**, and
-   show that it received mWETH and paid mUSDC.
-2. With Wallet B, open **Fills**, locate the Sell intent, click **Decrypt**, and
-   show that it paid mWETH and received mUSDC.
-3. Refresh both pages and show that fill and intent history remains.
+1. With Wallet A, decrypt the Buy fill and show received mWETH and paid mUSDC.
+2. With Wallet B, decrypt the Sell fill and show paid mWETH and received mUSDC.
+3. Refresh one Fills page to show that history remains.
+4. End on the Epoch page with **Perfect net** visible.
 
-**Proof point**
+**Key message**
 
-Each participant decrypts only their own fill. History is reconstructed from
-Sepolia events rather than browser-local state.
-
-### Phase 8: Unshield and Close
-
-**Screen**
-
-1. With Wallet A, return to **Shield**.
-2. Select a token with a confidential balance and click **Unshield**.
-3. Approve the transaction.
-4. Show the message explaining that Zama KMS finalization is asynchronous.
-5. If finalization completes during recording, refresh and show the public
-   balance increase. Otherwise, keep the pending message visible briefly.
-6. End on the settled epoch's **Perfect net** view or the Noxage overview.
-
-**Proof point**
-
-Confidential value can return to its public ERC-20 form, with asynchronous KMS
-finalization clearly represented by the interface.
+Each trader can read their own private result, while the history is rebuilt from
+Sepolia events.
 
 ## Continuous Voiceover
 
-Copy the following block as one script for the voice generator:
+This script is written for a calm pace of about 125 to 135 words per minute.
+Copy the block as one script for the voice generator:
 
 ```text
-Noxage is a confidential intent settlement prototype for open DeFi. Its purpose is to keep each trader's direction, size, limit, balance, and fill encrypted, while preserving access to public liquidity for any unmatched remainder. In this demonstration, I will use two independent wallets on Ethereum Sepolia. Wallet A is the protocol operator, while Wallet B acts as a second trader and, temporarily, as an authorized observer.
+Noxage is a private trading system for open DeFi. It keeps each user's trade amount, buy or sell choice, limit, balance, and final fill encrypted. Only the part that cannot be matched inside the batch needs public liquidity.
 
-The application first enforces its network boundary. When Wallet B is connected to another network, Noxage blocks the workflow and requests a switch to Sepolia. After switching, Wallet B can use normal trading features, but it cannot see operator-only controls. When I connect Wallet A, the Open epoch control appears. This separates ordinary users from the account authorized to open and finalize settlement.
+For this demo, I am using two wallets on Ethereum Sepolia. Wallet A is the operator. Wallet B is a normal trader. When Wallet B is connected to the wrong network, the app blocks the workflow and asks for Sepolia. After switching networks, Wallet B can use the app, but it cannot see operator controls. When I connect Wallet A, the Open epoch control appears.
 
-I will begin by creating confidential balances. Noxage includes faucets for mock mUSDC and mWETH, so no real assets are needed. After minting the test tokens, I shield ten mUSDC and two mWETH. The public balance decreases, while the confidential balance is represented by an encrypted handle and displayed as sealed. The application does not reveal this value automatically. I click Decrypt and approve a wallet signature, after which the correct confidential amount is shown locally.
+First, I will create a confidential balance. I use the built-in faucet to receive test mUSDC. I then shield ten mUSDC. The public balance goes down, and the confidential balance is hidden. The app shows sealed dots instead of the amount. To read the balance, I click Decrypt and approve a wallet signature. The correct amount is then shown in my browser.
 
-Noxage also supports controlled disclosure. From the Auditor page, Wallet A grants Wallet B observer access for confidential mUSDC. Observer access applies from the next balance update, so I shield one additional mUSDC to create a new encrypted balance handle. Wallet B can now enter Wallet A's address, request the auditor view, sign, and decrypt that balance. This access is token-specific and revocable. After Wallet A revokes Wallet B and creates another balance handle, Wallet B's next decrypt attempt fails. The demonstration shows that disclosure is deliberate, limited, and can be withdrawn for future balance updates.
+Noxage also supports controlled access. Wallet A gives Wallet B permission to view its confidential mUSDC balance. I make one more balance update, then switch to Wallet B. Wallet B enters Wallet A's address, signs the request, and can read the balance as an auditor. Wallet A can use the Revoke control to block access to future balance updates.
 
-Now I will demonstrate the confidential intent lifecycle. Wallet A opens a new sixty-second epoch. Before creating the final matched batch, I submit a small buy intent and cancel it from the Fills page while the epoch is still open. Its state changes to Cancelled, proving that a user can withdraw an intent before the batch closes and that it will not participate in settlement.
+Now I will show the main trading flow. Wallet A opens a new sixty-second epoch. Wallet A submits an intent to buy one mWETH. Wallet B submits an intent to sell one mWETH. Both limits are left blank.
 
-For the successful settlement, Wallet A submits an intent to buy exactly one mWETH, and Wallet B submits an intent to sell exactly one mWETH. Both limits are left blank. Each browser encrypts the direction, amount, and limit before submitting ciphertext handles to the intent book. The public interface can show that two active intents exist in the epoch, but the individual trading instructions remain sealed.
+The browser encrypts the amount, the side, and the limit before sending the intent to the chain. The public can see that the epoch contains two intents, but it cannot read the private details of either trade.
 
-When the epoch timer expires, closing becomes permissionless, so either wallet can seal the batch. Preparing settlement is also permissionless. During preparation, the settlement engine homomorphically totals the encrypted buy and sell flow and computes the residual without revealing either user's individual intent. Because these orders are equal and opposite, they form a perfect net.
+After the timer ends, either user can close the epoch. Either user can also prepare settlement. At this stage, Noxage adds the encrypted buy and sell amounts and finds the difference without first revealing each user's order.
 
-Finalization remains restricted to the operator. Wallet A requests public decryption of the aggregate residual, approves the signed result, and submits the final settlement transaction. The epoch becomes Settled, and the interface reports Perfect net. No residual swap reaches Uniswap, because all opposing flow was absorbed inside the encrypted batch. This is the central Noxage result: private coordination can reduce the amount of order flow exposed to public liquidity.
+These two trades are equal and opposite, so they form a perfect net. Wallet A performs the final operator step. I approve the request to reveal the total difference, then approve the settlement transaction.
 
-The final fills also remain confidential. Wallet A opens the Fills page, signs a decrypt request, and sees that the buy intent received mWETH and paid mUSDC. Wallet B separately decrypts the sell fill and sees that it paid mWETH and received mUSDC. Neither user needs the other user's private fill data. After refreshing both pages, the intent and fill history remains available because the application reconstructs it from Sepolia events rather than relying on browser-local storage.
+The epoch is now settled. The result says Perfect net. This means the buy and sell matched inside the private batch. There was no amount left over, so no trade had to be sent to Uniswap.
 
-Finally, I return to the Shield page and unshield part of the confidential value. The unwrap transaction begins an asynchronous Zama KMS finalization process, and the interface reports that state honestly until the public balance updates.
+The final fills are also private. Wallet A signs a request and sees that the buy order received mWETH and paid mUSDC. Wallet B signs separately and sees that the sell order paid mWETH and received mUSDC.
 
-This demonstration brings the complete Noxage flow together: confidential balances, explicit and revocable disclosure, encrypted intents, epoch-based private netting, aggregate-only public settlement, owner-gated fill decryption, and on-chain history. Noxage does not hide that a batch occurred, but it prevents individual strategy data from being published in plaintext and sends only the unmatched aggregate residual to public DeFi.
+After a refresh, the fill history is still available because the app rebuilds it from Sepolia events. This demo shows the main value of Noxage: users can submit private trade instructions, match them inside an encrypted batch, reveal only the total difference, and privately read their own results.
 ```
+
+## Optional Proof Clips
+
+Do not include these in the main four-minute video unless there is spare time:
+
+- Cancel an intent while the epoch is open.
+- Revoke Wallet B, create a new balance handle, and show its decrypt request
+  failing.
+- Unshield a confidential balance and show the asynchronous KMS message.
 
 ## Optional Failure-Path Appendix
 
