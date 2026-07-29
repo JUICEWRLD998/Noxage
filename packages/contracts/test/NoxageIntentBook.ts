@@ -40,11 +40,12 @@ describe("NoxageIntentBook + NoxageEpochManager", () => {
     await epochs.waitForDeployment();
 
     const Book = await ethers.getContractFactory("NoxageIntentBook");
-    book = await Book.deploy(await epochs.getAddress());
+    book = await Book.deploy(await epochs.getAddress(), PAIR);
     await book.waitForDeployment();
     bookAddr = await book.getAddress();
 
     await (await epochs.setIntentBook(bookAddr)).wait();
+    await (await book.setSettlementEngine(await owner.getAddress())).wait();
   });
 
   // Helper: build a deadline safely in the future.
@@ -132,6 +133,18 @@ describe("NoxageIntentBook + NoxageEpochManager", () => {
       expect(await epochs.statusOf(1)).to.equal(Status.Settled);
     });
 
+    it("removes owner settlement authority after the engine is wired", async () => {
+      await (await epochs.openEpoch()).wait();
+      await (await epochs.closeEpoch(1)).wait();
+      await (await epochs.setSettlementEngine(await alice.getAddress())).wait();
+
+      await expect(epochs.markSettled.staticCall(1, ethers.id("owner-bypass")))
+        .to.be.revertedWithCustomError(epochs, "NotSettlementAuthority");
+      await expect(
+        epochs.connect(alice).markSettled(1, ethers.id("engine-settlement")),
+      ).to.emit(epochs, "EpochSettled");
+    });
+
     it("lets anyone close after the duration elapses", async () => {
       await (await epochs.openEpoch()).wait();
       // Not yet expired: a non-owner cannot close.
@@ -145,11 +158,44 @@ describe("NoxageIntentBook + NoxageEpochManager", () => {
       await (await epochs.connect(alice).closeEpoch(1)).wait();
       expect(await epochs.statusOf(1)).to.equal(Status.Closed);
     });
+
+    it("keeps the active epoch close time fixed when duration changes", async () => {
+      await (await epochs.openEpoch()).wait();
+      const opened = await epochs.getEpoch(1);
+      await (await epochs.setEpochDuration(EPOCH_DURATION * 10)).wait();
+      const unchanged = await epochs.getEpoch(1);
+      expect(unchanged.closesAt).to.equal(opened.closesAt);
+
+      await ethers.provider.send("evm_increaseTime", [EPOCH_DURATION + 1]);
+      await ethers.provider.send("evm_mine", []);
+      await expect(epochs.connect(alice).closeEpoch(1)).to.emit(epochs, "EpochClosed");
+    });
   });
 
   describe("intent submission", () => {
     beforeEach(async () => {
       await (await epochs.openEpoch()).wait();
+    });
+
+    it("rejects intents for a different market", async () => {
+      const enc = await fhevm
+        .createEncryptedInput(bookAddr, await alice.getAddress())
+        .add8(1n)
+        .add64(1n)
+        .add64(0n)
+        .encrypt();
+      await expect(
+        book
+          .connect(alice)
+          .submitIntent(
+            ethers.id("OTHER/PAIR"),
+            await futureDeadline(),
+            enc.handles[0],
+            enc.handles[1],
+            enc.handles[2],
+            enc.inputProof,
+          ),
+      ).to.be.revertedWithCustomError(book, "UnsupportedPair");
     });
 
     it("stores multiple users' intents as ciphertext handles, decryptable by owner", async () => {

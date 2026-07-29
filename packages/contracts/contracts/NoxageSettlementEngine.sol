@@ -6,6 +6,7 @@ import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {NoxageEpochManager} from "./NoxageEpochManager.sol";
 import {NoxageIntentBook} from "./NoxageIntentBook.sol";
 import {NoxageFillLedger} from "./NoxageFillLedger.sol";
@@ -39,7 +40,7 @@ import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
  * intent book, so it can net the batch. It learns only the aggregate residual —
  * never any individual amount. See docs/THREAT-MODEL.md.
  */
-contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable {
+contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     NoxageEpochManager public immutable epochManager;
@@ -50,6 +51,7 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable {
     /// @notice Public underlying tokens of the (single) supported pair.
     IERC20 public immutable baseToken;
     IERC20 public immutable quoteToken;
+    bytes32 public immutable supportedPair;
 
     /// @notice Uniswap v3 fee tier used for the residual leg (e.g. 3000 = 0.3%).
     uint24 public poolFee;
@@ -84,8 +86,8 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable {
     error EpochNotClosed(uint256 epochId);
     error AlreadyPrepared(uint256 epochId);
     error NotPrepared(uint256 epochId);
-    error NoActiveIntents(uint256 epochId);
     error InvalidPrice();
+    error UnsupportedPair(bytes32 pair);
     error ZeroAddress();
 
     constructor(
@@ -96,6 +98,7 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable {
         address swapRouter_,
         address baseToken_,
         address quoteToken_,
+        bytes32 supportedPair_,
         uint24 poolFee_
     ) Ownable(initialOwner) {
         if (
@@ -113,6 +116,7 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable {
         swapRouter = ISwapRouter(swapRouter_);
         baseToken = IERC20(baseToken_);
         quoteToken = IERC20(quoteToken_);
+        supportedPair = supportedPair_;
         poolFee = poolFee_;
         emit PoolFeeSet(poolFee_);
     }
@@ -142,24 +146,23 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable {
         if (s.status != SettlementStatus.None) revert AlreadyPrepared(epochId);
 
         uint256[] memory ids = intentBook.epochIntentIds(epochId);
+        uint64 closedAt = epochManager.getEpoch(epochId).closedAt;
 
         euint64 buyTotal = FHE.asEuint64(0);
         euint64 sellTotal = FHE.asEuint64(0);
         euint64 zero = FHE.asEuint64(0);
 
-        uint256 active;
         for (uint256 i = 0; i < ids.length; i++) {
             NoxageIntentBook.Intent memory intent = intentBook.getIntent(ids[i]);
             if (intent.status != NoxageIntentBook.IntentStatus.Active) continue;
-            active++;
+            if (intent.pair != supportedPair) revert UnsupportedPair(intent.pair);
+            if (intent.deadline < closedAt) continue;
 
             // side == 1 → buy base; side == 0 → sell base.
             ebool isBuy = FHE.eq(intent.side, uint8(1));
             buyTotal = FHE.add(buyTotal, FHE.select(isBuy, intent.amount, zero));
             sellTotal = FHE.add(sellTotal, FHE.select(isBuy, zero, intent.amount));
         }
-        if (active == 0) revert NoActiveIntents(epochId);
-
         // Residual = |buy − sell|; both subtraction branches are computed but the
         // select discards the underflowing one. dir = 1 when buyers dominate.
         ebool buyHeavy = FHE.gt(buyTotal, sellTotal);
@@ -214,7 +217,7 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable {
         uint64 priceDen,
         uint256 amountOutMinimum,
         bytes calldata decryptionProof
-    ) external onlyOwner {
+    ) external onlyOwner nonReentrant {
         Settlement storage s = _settlements[epochId];
         if (s.status != SettlementStatus.Prepared) revert NotPrepared(epochId);
         if (priceNum == 0 || priceDen == 0) revert InvalidPrice();
@@ -247,13 +250,13 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable {
                         tokenOut: address(tokenOut),
                         fee: poolFee,
                         recipient: address(this),
-                        deadline: block.timestamp,
                         amountIn: amountIn,
                         amountOutMinimum: amountOutMinimum,
                         sqrtPriceLimitX96: 0
                     })
                 )
             returns (uint256 amountOut) {
+                tokenIn.forceApprove(address(swapRouter), 0);
                 emit ResidualSwapped(epochId, buyHeavy, amountIn, amountOut);
             } catch {
                 tokenIn.forceApprove(address(swapRouter), 0);
@@ -282,12 +285,15 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable {
         uint64 priceDen
     ) private returns (uint256 filled) {
         uint256[] memory ids = intentBook.epochIntentIds(epochId);
+        uint64 closedAt = epochManager.getEpoch(epochId).closedAt;
         euint64 zero = FHE.asEuint64(0);
 
         for (uint256 i = 0; i < ids.length; i++) {
             uint256 intentId = ids[i];
             NoxageIntentBook.Intent memory intent = intentBook.getIntent(intentId);
             if (intent.status != NoxageIntentBook.IntentStatus.Active) continue;
+            if (intent.pair != supportedPair) revert UnsupportedPair(intent.pair);
+            if (intent.deadline < closedAt) continue;
 
             // quote leg = amount * price, at the public clearing price.
             euint64 quoteLeg = FHE.div(FHE.mul(intent.amount, priceNum), priceDen);
@@ -325,7 +331,7 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable {
     // ─────────────────────────────────────────────────────────────
 
     /// @notice Withdraw engine inventory (owner-only ops function).
-    function withdraw(IERC20 token, address to, uint256 amount) external onlyOwner {
+    function withdraw(IERC20 token, address to, uint256 amount) external onlyOwner nonReentrant {
         if (to == address(0)) revert ZeroAddress();
         token.safeTransfer(to, amount);
     }

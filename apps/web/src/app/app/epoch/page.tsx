@@ -96,6 +96,7 @@ export default function EpochPage() {
     | {
         status: number;
         openedAt: bigint;
+        closesAt: bigint;
         closedAt: bigint;
         intentCount: number;
         settlementRef: `0x${string}`;
@@ -131,8 +132,7 @@ export default function EpochPage() {
   }, [chainStatus]);
 
   const openedAt = Number(epoch?.openedAt ?? 0n);
-  const duration = Number(active.duration ?? 60n);
-  const closesAt = openedAt + duration;
+  const closesAt = Number(epoch?.closesAt ?? 0n);
   const hasRecordedIntents = (epoch?.intentCount ?? 0) > 0;
 
   const uiStatus: UiStatus = useMemo(() => {
@@ -333,66 +333,39 @@ export default function EpochPage() {
                     {uiStatus === "settling"
                       ? "Encrypted netting in progress"
                       : !hasRecordedIntents
-                        ? "Epoch closed — no intents to net"
-                      : "Epoch closed — awaiting netting"}
+                        ? "Epoch closed — zero-flow settlement"
+                        : "Epoch closed — awaiting netting"}
                   </p>
                   <p className={styles.muted}>
                     {uiStatus === "settling"
                       ? "Buy and sell flow cancels homomorphically over encrypted amounts. Only the aggregate residual will ever be revealed."
                       : !hasRecordedIntents
-                        ? "No intents were sealed before this epoch closed, so settlement cannot be prepared. Start a new epoch and submit at least one intent."
-                      : "The batch is sealed. Settlement prepares next: encrypted netting, then the residual (if any) swaps publicly."}
+                        ? "No intents were sealed, so preparation produces a zero residual and finalization closes the epoch without a public swap."
+                        : "The batch is sealed. Settlement prepares next: encrypted netting, then the residual (if any) swaps publicly."}
                   </p>
                 </>
               )}
               {uiStatus === "closed" &&
                 settlement.status === SettlementStatus.None &&
-                (hasRecordedIntents ? (
-                  <div className={styles.closeRow}>
-                    <p className={styles.muted}>
-                      Homomorphic netting is permissionless — anyone can run
-                      prepare once the epoch is closed.
-                    </p>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      loading={prepare.isPending}
-                      onClick={async () => {
-                        const ok = await prepare.prepare(viewedId);
-                        if (ok) void settlement.refetch();
-                      }}
-                    >
-                      {prepare.stage === "preparing"
-                        ? "Preparing…"
-                        : "Prepare settlement"}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className={styles.closeRow}>
-                    <p className={styles.muted}>
-                      {operator.isOperator
-                        ? "Open the next epoch to resume accepting sealed intents."
-                        : "The operator must open the next epoch before intents can be submitted."}
-                    </p>
-                    {operator.isOperator && (
-                      <Button
-                        variant="accent"
-                        size="sm"
-                        loading={openEpoch.isPending}
-                        onClick={async () => {
-                          const ok = await openEpoch.openEpoch();
-                          if (ok) {
-                            setOverride(null);
-                            void active.refetch();
-                            void currentQuery.refetch();
-                          }
-                        }}
-                      >
-                        Open next epoch
-                      </Button>
-                    )}
-                  </div>
-                ))}
+                <div className={styles.closeRow}>
+                  <p className={styles.muted}>
+                    Homomorphic netting is permissionless — anyone can run
+                    prepare once the epoch is closed.
+                  </p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    loading={prepare.isPending}
+                    onClick={async () => {
+                      const ok = await prepare.prepare(viewedId);
+                      if (ok) void settlement.refetch();
+                    }}
+                  >
+                    {prepare.stage === "preparing"
+                      ? "Preparing…"
+                      : "Prepare settlement"}
+                  </Button>
+                </div>}
               {prepare.error && (
                 <p className={styles.errorText}>{prepare.error}</p>
               )}
@@ -404,9 +377,8 @@ export default function EpochPage() {
               {settlement.status === SettlementStatus.Prepared && (
                 <div className={styles.closeRow}>
                   <p className={styles.muted}>
-                    Residual handles are publicly decryptable. On Sepolia,
-                    perfect-net batches (matching buy/sell size) settle
-                    reliably.
+                    Residual handles are publicly decryptable. Finalization
+                    verifies the signed aggregate before any public swap.
                   </p>
                   {operator.isOperator ? (
                     <Button

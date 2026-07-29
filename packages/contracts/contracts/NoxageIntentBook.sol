@@ -27,6 +27,7 @@ import {NoxageEpochManager} from "./NoxageEpochManager.sol";
  */
 contract NoxageIntentBook is ZamaEthereumConfig {
     NoxageEpochManager public immutable epochManager;
+    bytes32 public immutable supportedPair;
 
     enum IntentStatus {
         None, // 0 — never existed
@@ -76,9 +77,12 @@ contract NoxageIntentBook is ZamaEthereumConfig {
     error NotOwner();
     error ZeroAddress();
     error SettlementEngineAlreadySet();
+    error SettlementEngineNotSet();
+    error UnsupportedPair(bytes32 pair);
 
-    constructor(address epochManager_) {
+    constructor(address epochManager_, bytes32 supportedPair_) {
         epochManager = NoxageEpochManager(epochManager_);
+        supportedPair = supportedPair_;
     }
 
     /**
@@ -113,6 +117,8 @@ contract NoxageIntentBook is ZamaEthereumConfig {
         bytes calldata inputProof
     ) external returns (uint256 intentId) {
         if (deadline <= block.timestamp) revert DeadlineInPast();
+        if (pair != supportedPair) revert UnsupportedPair(pair);
+        if (settlementEngine == address(0)) revert SettlementEngineNotSet();
 
         // Bind to the currently open epoch (reverts if none is open).
         uint256 epochId = epochManager.activeEpochId();

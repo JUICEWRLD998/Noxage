@@ -60,9 +60,7 @@ async function main() {
   const priceDen = BigInt(process.env.CLEARING_PRICE_DEN ?? "1");
   const amountOutMinimum = BigInt(process.env.AMOUNT_OUT_MINIMUM ?? "0");
 
-  console.log(
-    `Finalizing: residualBase=${residualBase}, buyHeavy=${buyHeavy}, price=${priceNum}/${priceDen}`,
-  );
+  console.log(`Finalizing settlement for epoch #${epochId}.`);
 
   const tx = await engine.finalizeSettlement(
     epochId,

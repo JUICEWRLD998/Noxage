@@ -38,6 +38,7 @@ export function useEpochStatus() {
     | {
         status: number;
         openedAt: bigint;
+        closesAt: bigint;
         closedAt: bigint;
         intentCount: number;
         settlementRef: `0x${string}`;
@@ -51,6 +52,7 @@ export function useEpochStatus() {
     hasOpenEpoch,
     status: (epoch?.status ?? EpochStatus.None) as EpochStatus,
     openedAt: epoch?.openedAt,
+    closesAt: epoch?.closesAt,
     intentCount: epoch?.intentCount ?? 0,
     duration,
     isLoading: activeQuery.isLoading,

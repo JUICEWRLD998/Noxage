@@ -255,6 +255,7 @@ export const epochManagerAbi = [
         components: [
           { name: "status", type: "uint8" },
           { name: "openedAt", type: "uint64" },
+          { name: "closesAt", type: "uint64" },
           { name: "closedAt", type: "uint64" },
           { name: "intentCount", type: "uint32" },
           { name: "settlementRef", type: "bytes32" },
@@ -356,11 +357,6 @@ export const settlementEngineAbi = [
   {
     type: "error",
     name: "AlreadyPrepared",
-    inputs: [{ name: "epochId", type: "uint256" }],
-  },
-  {
-    type: "error",
-    name: "NoActiveIntents",
     inputs: [{ name: "epochId", type: "uint256" }],
   },
   {

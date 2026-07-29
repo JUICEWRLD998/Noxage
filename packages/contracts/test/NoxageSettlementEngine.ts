@@ -92,7 +92,7 @@ describe("NoxageSettlementEngine", () => {
     await epochs.waitForDeployment();
 
     const Book = await ethers.getContractFactory("NoxageIntentBook");
-    book = await Book.deploy(await epochs.getAddress());
+    book = await Book.deploy(await epochs.getAddress(), PAIR);
     await book.waitForDeployment();
     bookAddr = await book.getAddress();
     await (await epochs.setIntentBook(bookAddr)).wait();
@@ -111,6 +111,7 @@ describe("NoxageSettlementEngine", () => {
       await router.getAddress(),
       await base.getAddress(),
       await quote.getAddress(),
+      PAIR,
       POOL_FEE,
     );
     await engine.waitForDeployment();
@@ -258,15 +259,35 @@ describe("NoxageSettlementEngine", () => {
       );
     });
 
-    it("reverts when there are no active intents", async () => {
+    it("excludes intents that expired before the epoch closed", async () => {
+      await (await epochs.openEpoch()).wait();
+      await (await submit(alice, Side.Buy, 5n * ONE)).wait();
+      await ethers.provider.send("evm_increaseTime", [3601]);
+      await ethers.provider.send("evm_mine", []);
+      await (await epochs.closeEpoch(1)).wait();
+
+      await (await engine.prepareSettlement(1)).wait();
+      const settlement = await engine.getSettlement(1);
+      const { clearValues } = await fhevm.publicDecrypt([
+        settlement.residualHandle,
+        settlement.dirHandle,
+      ]);
+      expect(clearValues[settlement.residualHandle]).to.equal(0n);
+    });
+
+    it("prepares a zero residual when every intent was cancelled", async () => {
       await (await epochs.openEpoch()).wait();
       await (await submit(alice, Side.Buy, 5n * ONE)).wait();
       await (await book.connect(alice).cancelIntent(1)).wait();
       await (await epochs.closeEpoch(1)).wait();
-      await expect(engine.prepareSettlement(1)).to.be.revertedWithCustomError(
-        engine,
-        "NoActiveIntents",
-      );
+      await expect(engine.prepareSettlement(1)).to.emit(engine, "SettlementPrepared");
+      const settlement = await engine.getSettlement(1);
+      const { clearValues } = await fhevm.publicDecrypt([
+        settlement.residualHandle,
+        settlement.dirHandle,
+      ]);
+      expect(clearValues[settlement.residualHandle]).to.equal(0n);
+      expect(clearValues[settlement.dirHandle]).to.equal(0n);
     });
 
     it("reveals only residual + direction handles (no plaintext amounts)", async () => {
@@ -357,6 +378,15 @@ describe("NoxageSettlementEngine", () => {
 
       const aliceFill = await decryptFillLegs(1, alice);
       expect(aliceFill.recvBase).to.equal(amt);
+    });
+  });
+
+  describe("router compatibility", () => {
+    it("uses the canonical SwapRouter02 exactInputSingle selector", async () => {
+      const selector = ethers
+        .id("exactInputSingle((address,address,uint24,address,uint256,uint256,uint160))")
+        .slice(0, 10);
+      expect(router.interface.getFunction("exactInputSingle")!.selector).to.equal(selector);
     });
   });
 

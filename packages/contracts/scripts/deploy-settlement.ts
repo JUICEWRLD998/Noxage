@@ -26,6 +26,7 @@ const UNISWAP_V3_SWAP_ROUTER_SEPOLIA = "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae4
 
 /** Default pool fee tier: 0.3%. */
 const DEFAULT_POOL_FEE = 3000;
+const SUPPORTED_PAIR = ethers.keccak256(ethers.toUtf8Bytes("mWETH/mUSDC"));
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -100,6 +101,7 @@ async function main() {
     swapRouterAddr,
     baseTokenAddr,
     quoteTokenAddr,
+    SUPPORTED_PAIR,
     DEFAULT_POOL_FEE,
   );
   await engine.waitForDeployment();

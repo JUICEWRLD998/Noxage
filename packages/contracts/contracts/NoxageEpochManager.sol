@@ -33,6 +33,7 @@ contract NoxageEpochManager is Ownable {
     struct Epoch {
         EpochStatus status;
         uint64 openedAt;
+        uint64 closesAt;
         uint64 closedAt;
         uint32 intentCount;
         // Opaque reference to the settlement (e.g. a tx hash or fill-ledger root).
@@ -80,9 +81,15 @@ contract NoxageEpochManager is Ownable {
         _;
     }
 
-    /// @dev Owner (ops recovery) or the wired settlement engine may finalize.
+    /// @dev Before the engine is wired, the owner may perform setup/recovery
+    ///      transitions. Afterwards, only the immutable engine authority may
+    ///      finalize epochs, preventing the owner from bypassing settlement.
     modifier onlySettlementAuthority() {
-        if (msg.sender != owner() && msg.sender != settlementEngine) {
+        address authority = settlementEngine;
+        if (
+            (authority == address(0) && msg.sender != owner()) ||
+            (authority != address(0) && msg.sender != authority)
+        ) {
             revert NotSettlementAuthority();
         }
         _;
@@ -147,12 +154,13 @@ contract NoxageEpochManager is Ownable {
         _epochs[epochId] = Epoch({
             status: EpochStatus.Open,
             openedAt: nowTs,
+            closesAt: nowTs + epochDuration,
             closedAt: 0,
             intentCount: 0,
             settlementRef: bytes32(0)
         });
 
-        emit EpochOpened(epochId, nowTs, nowTs + epochDuration);
+        emit EpochOpened(epochId, nowTs, _epochs[epochId].closesAt);
     }
 
     /**
@@ -165,7 +173,7 @@ contract NoxageEpochManager is Ownable {
         Epoch storage epoch = _epochs[epochId];
         if (epoch.status != EpochStatus.Open) revert EpochNotOpen(epochId);
 
-        bool expired = block.timestamp >= uint256(epoch.openedAt) + epochDuration;
+        bool expired = block.timestamp >= epoch.closesAt;
         if (msg.sender != owner() && !expired) revert EpochNotOpen(epochId);
 
         epoch.status = EpochStatus.Closed;
@@ -177,8 +185,8 @@ contract NoxageEpochManager is Ownable {
     /**
      * @notice Mark a closed epoch as settled once residual settlement has executed.
      * @param settlementRef Opaque pointer to the settlement (tx hash / fill root).
-     * @dev Callable by the wired {settlementEngine} (normal path) or the owner
-     *      (ops recovery). Reverts if the epoch is not Closed.
+     * @dev Callable by the owner before an engine is wired, and only by the
+     *      wired {settlementEngine} afterwards. Reverts if not Closed.
      */
     function markSettled(uint256 epochId, bytes32 settlementRef) external onlySettlementAuthority {
         Epoch storage epoch = _epochs[epochId];

@@ -14,6 +14,7 @@ import * as path from "path";
  */
 
 const EPOCH_DURATION_SECONDS = 60;
+const SUPPORTED_PAIR = ethers.keccak256(ethers.toUtf8Bytes("mWETH/mUSDC"));
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -29,7 +30,7 @@ async function main() {
   console.log(`  NoxageEpochManager: ${epochsAddr}`);
 
   const Book = await ethers.getContractFactory("NoxageIntentBook");
-  const book = await Book.deploy(epochsAddr);
+  const book = await Book.deploy(epochsAddr, SUPPORTED_PAIR);
   await book.waitForDeployment();
   const bookAddr = await book.getAddress();
   console.log(`  NoxageIntentBook:   ${bookAddr}`);
