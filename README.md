@@ -195,9 +195,10 @@ iExec Nox protocol. The checked-in code uses:
 
 For Ethereum Sepolia (`chainId 11155111`), the installed Nox packages resolve
 NoxCompute to `0x24Ef36Ec5b626D7DCD09a98F3083c2758F0F77bF`. The current web
-client calls `createViemHandleClient(walletClient)` and relies on the Handle
-SDK's built-in Ethereum Sepolia gateway, NoxCompute, and subgraph configuration.
-It does not read environment variables for custom Nox endpoint overrides.
+client calls `createViemHandleClient(walletClient, config)`. It uses the Handle
+SDK's built-in Ethereum Sepolia gateway, NoxCompute, and subgraph configuration
+unless all three `NEXT_PUBLIC_NOX_*` overrides are supplied. Partial overrides
+are rejected to prevent mismatched protocol endpoints.
 
 Source migration does not make the checked-in deployment current. A coordinated
 fresh Ethereum Sepolia deployment and new deployment metadata are still
@@ -347,10 +348,19 @@ NEXT_PUBLIC_NOXAGE_INTENT_BOOK_ADDRESS=0x...
 NEXT_PUBLIC_NOXAGE_EPOCH_MANAGER_ADDRESS=0x...
 NEXT_PUBLIC_NOXAGE_SETTLEMENT_EXECUTOR_ADDRESS=0x...
 NEXT_PUBLIC_NOXAGE_FILL_LEDGER_ADDRESS=0x...
+NEXT_PUBLIC_NOXAGE_DEPLOY_BLOCK=12345678
 NEXT_PUBLIC_NOXAGE_CONFIDENTIAL_USDC_ADDRESS=0x...
 NEXT_PUBLIC_NOXAGE_CONFIDENTIAL_WETH_ADDRESS=0x...
 NEXT_PUBLIC_MOCK_USDC_ADDRESS=0x...
 NEXT_PUBLIC_MOCK_WETH_ADDRESS=0x...
+```
+
+Optional Handle SDK overrides must be configured as one set:
+
+```bash
+NEXT_PUBLIC_NOX_GATEWAY_URL=https://...
+NEXT_PUBLIC_NOX_COMPUTE_ADDRESS=0x...
+NEXT_PUBLIC_NOX_SUBGRAPH_URL=https://...
 ```
 
 Never commit `.env`, `.env.local`, private keys, or RPC credentials. The
@@ -421,7 +431,8 @@ The coordinated deploy command runs the confidential, intent, and settlement
 phases in order. The first phase creates a new `deploymentId`; later phases
 refuse metadata from a different backend or phase. Preflight requires a
 `complete` iExec Nox deployment and checks bytecode, write-once wiring, owners,
-token underlyings, and the supported pair. It still cannot prove gateway
+token underlyings, the supported pair, and a valid historical event scan block.
+It still cannot prove gateway
 encryption, confidential execution, proof delivery, or router liquidity.
 
 Before opening an epoch, confirm that:
@@ -459,8 +470,9 @@ Noxage is a **hackathon MVP**, not an audited production protocol. Use testnet a
 
 - The source migration to Nox primitives and the Handle SDK is implemented, but
   the complete production path has not passed live end-to-end verification.
-- The web Handle client uses the SDK's built-in Ethereum Sepolia configuration;
-  custom gateway, NoxCompute, and subgraph overrides are not wired.
+- The web Handle client uses the SDK's built-in Ethereum Sepolia configuration
+  by default; custom gateway, NoxCompute, and subgraph overrides are supported
+  only as a complete three-value set.
 - Intent direction is represented as encrypted `bool`; amounts, limits,
   confidential balances, and fill legs use encrypted `uint256`.
 - The legacy Sepolia addresses above are not Noxage's migrated deployment.
@@ -476,6 +488,9 @@ Noxage is a **hackathon MVP**, not an audited production protocol. Use testnet a
   model.
 - Nox public-decryption proof verification and the residual router path still
   require live Ethereum Sepolia validation.
+- On July 30, 2026, `pnpm contracts:preflight:sepolia` was run and correctly
+  stopped because `deployments/sepolia.json` is marked as legacy pre-Nox
+  metadata, not a complete coordinated Nox deployment.
 - `docs/THREAT-MODEL.md` and the other documentation files referenced by the
   original implementation plan are not checked in.
 

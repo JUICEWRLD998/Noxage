@@ -11,6 +11,28 @@ import { getAddress, type Address, type Hex, type WalletClient } from "viem";
 
 const clientPromises = new WeakMap<WalletClient, Promise<HandleClient>>();
 
+const noxConfigValues = [
+  process.env.NEXT_PUBLIC_NOX_GATEWAY_URL,
+  process.env.NEXT_PUBLIC_NOX_COMPUTE_ADDRESS,
+  process.env.NEXT_PUBLIC_NOX_SUBGRAPH_URL,
+] as const;
+
+function getNoxConfig(): Parameters<typeof createViemHandleClient>[1] {
+  const configured = noxConfigValues.filter(Boolean).length;
+  if (configured === 0) return undefined;
+  if (configured !== noxConfigValues.length) {
+    throw new Error(
+      "Set all three NEXT_PUBLIC_NOX_* variables or leave all three unset",
+    );
+  }
+
+  return {
+    gatewayUrl: noxConfigValues[0],
+    smartContractAddress: noxConfigValues[1],
+    subgraphUrl: noxConfigValues[2],
+  } as NonNullable<Parameters<typeof createViemHandleClient>[1]>;
+}
+
 function normalizeAddress(address: Address | string): Address {
   return getAddress(address.toLowerCase());
 }
@@ -37,7 +59,7 @@ export function getNoxHandleClient(
     );
   }
 
-  const clientPromise = createViemHandleClient(walletClient);
+  const clientPromise = createViemHandleClient(walletClient, getNoxConfig());
   clientPromises.set(walletClient, clientPromise);
   clientPromise.catch(() => {
     clientPromises.delete(walletClient);
@@ -108,6 +130,7 @@ export async function encryptIntent(
 /** One handle/contract pair to decrypt through Nox. */
 export interface DecryptRequest {
   handle: Hex;
+  solidityType: "uint256";
 }
 
 /**
@@ -131,10 +154,12 @@ export async function decryptHandles(
   const client = await getNoxHandleClient(walletClient);
   // The first decrypt creates and stores the wallet authorization. Run these
   // sequentially so later handles reuse it instead of prompting in parallel.
-  for (const { handle } of live) {
+  for (const { handle, solidityType } of live) {
     const result = await client.decrypt(handle as Handle<SolidityType>);
-    if (typeof result.value !== "bigint") {
-      throw new Error(`Nox decrypted a non-integer value for ${handle}`);
+    if (result.solidityType !== solidityType || typeof result.value !== "bigint") {
+      throw new Error(
+        `Nox returned ${result.solidityType}; expected ${solidityType} for ${handle}`,
+      );
     }
     results[handle] = result.value;
   }
@@ -146,11 +171,19 @@ export async function decryptHandle(
   handle: Hex,
   walletClient: WalletClient,
 ): Promise<bigint> {
-  const results = await decryptHandles([{ handle }], walletClient);
+  const results = await decryptHandles(
+    [{ handle, solidityType: "uint256" }],
+    walletClient,
+  );
   return results[handle];
 }
 
 export type PublicDecryptedValue = JsValue<SolidityType>;
+
+export interface PublicDecryptRequest {
+  handle: Hex;
+  solidityType: "bool" | "uint256";
+}
 
 export interface PublicDecryptResult {
   clearValues: Record<Hex, PublicDecryptedValue>;
@@ -162,12 +195,12 @@ export interface PublicDecryptResult {
  * one proof per handle rather than a single aggregate decryption proof.
  */
 export async function publicDecryptHandles(
-  handles: Hex[],
+  requests: PublicDecryptRequest[],
   walletClient: WalletClient,
 ): Promise<PublicDecryptResult> {
   const clearValues: Record<Hex, PublicDecryptedValue> = {};
   const decryptionProofs: Record<Hex, Hex> = {};
-  for (const handle of handles) {
+  for (const { handle } of requests) {
     if (isZeroHandle(handle)) {
       throw new Error("Cannot publicly decrypt an empty Nox handle");
     }
@@ -175,10 +208,15 @@ export async function publicDecryptHandles(
 
   const client = await getNoxHandleClient(walletClient);
   const decrypted = await Promise.all(
-    handles.map(async (handle) => {
+    requests.map(async ({ handle, solidityType }) => {
       const result = await client.publicDecrypt(
         handle as Handle<SolidityType>,
       );
+      if (result.solidityType !== solidityType) {
+        throw new Error(
+          `Nox returned ${result.solidityType}; expected ${solidityType} for ${handle}`,
+        );
+      }
       return {
         handle,
         value: result.value,

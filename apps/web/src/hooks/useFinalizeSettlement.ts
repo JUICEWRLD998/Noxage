@@ -9,7 +9,7 @@ import {
 } from "@/lib/wallet";
 import { settlementEngineAbi, SettlementStatus } from "@/lib/abis";
 import { addresses } from "@/lib/contracts";
-import { publicDecryptHandles } from "@/lib/fhe";
+import { publicDecryptHandles } from "@/lib/nox";
 import { useTxToast } from "./useTxToast";
 
 type FinalizeStage = "idle" | "decrypting" | "finalizing" | "done" | "error";
@@ -64,7 +64,13 @@ export function useFinalizeSettlement() {
           "Requesting Nox public decrypt for aggregate handles.",
         );
         const { clearValues, decryptionProofs } = await publicDecryptHandles(
-          [settlement.residualHandle, settlement.dirHandle],
+          [
+            {
+              handle: settlement.residualHandle,
+              solidityType: "uint256",
+            },
+            { handle: settlement.dirHandle, solidityType: "bool" },
+          ],
           walletClient,
         );
 

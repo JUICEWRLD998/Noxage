@@ -13,6 +13,28 @@ Nox `ebool` and `euint256` handles, Nox ERC-7984 wrappers, and
 passing, lint with zero errors and one warning, and a successful production web
 build. Those checks do not establish live Sepolia confidential execution.
 
+The frontend integration now lives in `apps/web/src/lib/nox.ts`. It creates a
+viem Handle client, encrypts `bool` and `uint256` inputs for the intent book,
+performs ACL-gated and public decrypts, and validates every returned Solidity
+type before clear values or proofs reach hooks. Ethereum Sepolia SDK defaults
+are used unless gateway, NoxCompute, and subgraph are overridden together.
+Fresh deployment metadata records `deployBlock`, required by the frontend as
+`NEXT_PUBLIC_NOXAGE_DEPLOY_BLOCK` for historical scans.
+
+Verification run on July 30, 2026:
+
+- `pnpm contracts:compile`: passed;
+- `pnpm contracts:test`: 11 passed;
+- `pnpm contracts:check`: passed;
+- `pnpm run build`: passed with non-fatal social-image font warnings;
+- `pnpm run lint`: zero errors and one existing stub warning;
+- `pnpm contracts:preflight:sepolia`: executed and intentionally failed because
+  `deployments/sepolia.json` is explicitly legacy pre-Nox metadata.
+
+These results verify source consistency and local behavior. They do not verify
+live Handle encryption, NoxCompute execution, proof delivery, router liquidity,
+or authorized fill decryption on a fresh Noxage Sepolia deployment.
+
 ---
 
 ## 0. Product definition (real product, not a demo)

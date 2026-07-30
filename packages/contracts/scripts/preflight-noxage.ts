@@ -13,6 +13,7 @@ type Deployment = {
   migrationStage?: string;
   deploymentId?: string;
   deployedBy?: string;
+  deployBlock?: number;
   updatedAt?: string;
   contracts?: Record<string, string>;
 };
@@ -55,10 +56,12 @@ async function main() {
   if (
     deployment.privacyBackend !== "iexec-nox" ||
     deployment.migrationStage !== "complete" ||
-    typeof deployment.deploymentId !== "string"
+    typeof deployment.deploymentId !== "string" ||
+    !Number.isSafeInteger(deployment.deployBlock) ||
+    Number(deployment.deployBlock) <= 0
   ) {
     throw new Error(
-      "Deployment metadata is not marked as a complete iExec Nox deployment. " +
+      "Deployment metadata is not a complete iExec Nox deployment with a deployBlock. " +
         "Run the three coordinated Sepolia deployment commands first.",
     );
   }
@@ -139,7 +142,7 @@ async function main() {
   }
 
   console.log(
-    `Preflight passed for deployment ${deployment.deploymentId}: bytecode, wiring, owners, token underlyings, and pair agree.`,
+    `Preflight passed for deployment ${deployment.deploymentId} from block ${deployment.deployBlock}: bytecode, wiring, owners, token underlyings, and pair agree.`,
   );
   console.log(
     "This does not prove gateway encryption, confidential execution, public decryption, router liquidity, or fill decryption.",

@@ -6,7 +6,7 @@ import { getAbiItem, type Hex } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "@/lib/wallet";
 import { fillLedgerAbi } from "@/lib/abis";
 import { addresses, INTENT_BOOK_DEPLOY_BLOCK } from "@/lib/contracts";
-import { decryptHandles } from "@/lib/fhe";
+import { decryptHandles } from "@/lib/nox";
 import {
   getHistoricalLogRanges,
   historicalLogsClient,
@@ -128,10 +128,10 @@ export function useFills() {
         const { handles } = fill;
         const results = await decryptHandles(
           [
-            { handle: handles.recvBase },
-            { handle: handles.recvQuote },
-            { handle: handles.payBase },
-            { handle: handles.payQuote },
+            { handle: handles.recvBase, solidityType: "uint256" },
+            { handle: handles.recvQuote, solidityType: "uint256" },
+            { handle: handles.payBase, solidityType: "uint256" },
+            { handle: handles.payQuote, solidityType: "uint256" },
           ],
           walletClient,
         );

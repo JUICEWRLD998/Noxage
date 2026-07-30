@@ -17,7 +17,7 @@ import {
 import { useObserver } from "@/hooks/useObserver";
 import { confidentialTokenAbi } from "@/lib/abis";
 import { TOKENS, TOKEN_LIST, type TokenKey } from "@/lib/contracts";
-import { decryptHandle, isZeroHandle } from "@/lib/fhe";
+import { decryptHandle, isZeroHandle } from "@/lib/nox";
 import { formatAmount, truncateHex } from "@/lib/format";
 import styles from "./auditor.module.css";
 

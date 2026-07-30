@@ -10,7 +10,7 @@ import {
 } from "@/lib/wallet";
 import { confidentialTokenAbi } from "@/lib/abis";
 import { TOKENS, type TokenKey } from "@/lib/contracts";
-import { isZeroHandle, publicDecryptHandles } from "@/lib/fhe";
+import { isZeroHandle, publicDecryptHandles } from "@/lib/nox";
 import { useTxToast } from "./useTxToast";
 
 type UnshieldStage =
@@ -91,7 +91,7 @@ export function useUnshield(tokenKey: TokenKey) {
         );
 
         const { clearValues, decryptionProofs } = await publicDecryptHandles(
-          [requestHandle],
+          [{ handle: requestHandle, solidityType: "uint256" }],
           walletClient,
         );
         if (typeof clearValues[requestHandle] !== "bigint") {

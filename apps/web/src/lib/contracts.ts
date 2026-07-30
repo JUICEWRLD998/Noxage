@@ -59,15 +59,19 @@ export const MISSING_ADDRESSES: string[] = Object.entries(addresses)
   .filter(([, addr]) => addr === ZERO_ADDRESS)
   .map(([name]) => name);
 
-/**
- * Sepolia block in which NoxageIntentBook
- * (0x3D979f0F9e2cCd1810494F3453BE7527270F3C00) was deployed — creation tx
- * 0x556dffa72c3a5a89baf594e866be09fd1b9ec8815f57b5b7d3f6472c0e46a5b1
- * (verified via eth_getTransactionReceipt + Blockscout, 2026-07-26T09:34:36Z).
- * The fill ledger and settlement engine deployed the same day, so this block
- * safely lower-bounds every Noxage event scan.
- */
-export const INTENT_BOOK_DEPLOY_BLOCK = 11353817n;
+function requiredBlock(name: string, value: string | undefined): bigint {
+  if (!value || !/^\d+$/.test(value)) {
+    console.warn(`[noxage] missing or invalid env ${name}`);
+    return 0n;
+  }
+  return BigInt(value);
+}
+
+/** First block scanned for intent, settlement, and fill events. */
+export const INTENT_BOOK_DEPLOY_BLOCK = requiredBlock(
+  "NEXT_PUBLIC_NOXAGE_DEPLOY_BLOCK",
+  process.env.NEXT_PUBLIC_NOXAGE_DEPLOY_BLOCK,
+);
 
 export type TokenKey = "USDC" | "WETH";
 

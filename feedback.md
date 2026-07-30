@@ -41,6 +41,11 @@ same NoxCompute proxy, `0x24Ef36Ec5b626D7DCD09a98F3083c2758F0F77bF`, for
 chain ID `11155111`. Having matching defaults in both packages removes several
 manual deployment mistakes.
 
+The package README in `0.1.0-beta.13` says built-in defaults include only
+Arbitrum Sepolia, while `src/config/networks.ts` also includes Ethereum Sepolia.
+The source is what the factory executes, but the discrepancy can send
+integrators toward unnecessary custom configuration.
+
 We also compiled and deployed a small Nox-based contract on Ethereum Sepolia
 during integration exploration. This confirmed basic package resolution and
 network deployment, but it did not exercise Noxage's complete settlement flow.
@@ -131,6 +136,8 @@ Completed or observed:
   Nox public-decryption proof checks, and Nox ERC-7984 wrappers.
 - The web client uses `@iexec-nox/handle` for input encryption, authorized
   decryption, and public decryption.
+- The web adapter validates returned Solidity types and accepts endpoint
+  overrides only when gateway, NoxCompute, and subgraph are all supplied.
 - On July 30, 2026, `pnpm contracts:test` reported 11 passing tests.
 - On July 30, 2026, `pnpm run lint` completed with zero errors and one warning.
 - On July 30, 2026, `pnpm run build` completed successfully; it logged
@@ -141,6 +148,8 @@ Completed or observed:
   phase mixing with legacy or unrelated metadata.
 - A read-only Sepolia preflight checks code, owners, wiring, token underlyings,
   and pair configuration before operator actions.
+- On July 30, 2026, that preflight was executed and refused the checked-in
+  legacy pre-Nox deployment metadata as designed.
 
 Still required:
 

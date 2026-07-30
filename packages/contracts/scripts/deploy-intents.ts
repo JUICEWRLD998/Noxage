@@ -33,6 +33,10 @@ async function main() {
   const book = await Book.deploy(epochsAddr, SUPPORTED_PAIR);
   await book.waitForDeployment();
   const bookAddr = await book.getAddress();
+  const bookReceipt = await book.deploymentTransaction()?.wait();
+  if (!bookReceipt) {
+    throw new Error("Could not resolve NoxageIntentBook deployment receipt");
+  }
   console.log(`  NoxageIntentBook:   ${bookAddr}`);
 
   const wireTx = await epochs.setIntentBook(bookAddr);
@@ -80,6 +84,7 @@ async function main() {
     privacyBackend: "iexec-nox",
     migrationStage: "intents",
     deployedBy: deployerAddr,
+    deployBlock: bookReceipt.blockNumber,
     contracts,
     updatedAt: new Date().toISOString(),
   };

@@ -10,7 +10,7 @@ import {
 } from "@/lib/wallet";
 import { intentBookAbi } from "@/lib/abis";
 import { addresses, MVP_PAIR_ID } from "@/lib/contracts";
-import { encryptIntent } from "@/lib/fhe";
+import { encryptIntent } from "@/lib/nox";
 import { useTxToast } from "./useTxToast";
 
 type IntentStage =

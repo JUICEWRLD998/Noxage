@@ -5,7 +5,7 @@ import type { Hex } from "viem";
 import { useAccount, useReadContract, useWalletClient } from "@/lib/wallet";
 import { confidentialTokenAbi, mockErc20Abi } from "@/lib/abis";
 import { TOKENS, type TokenKey } from "@/lib/contracts";
-import { decryptHandle, isZeroHandle } from "@/lib/fhe";
+import { decryptHandle, isZeroHandle } from "@/lib/nox";
 
 /** Public ERC-20 balance of the connected account for a token. */
 export function usePublicBalance(tokenKey: TokenKey) {

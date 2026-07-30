@@ -226,6 +226,7 @@ NEXT_PUBLIC_NOXAGE_INTENT_BOOK_ADDRESS
 NEXT_PUBLIC_NOXAGE_EPOCH_MANAGER_ADDRESS
 NEXT_PUBLIC_NOXAGE_SETTLEMENT_EXECUTOR_ADDRESS
 NEXT_PUBLIC_NOXAGE_FILL_LEDGER_ADDRESS
+NEXT_PUBLIC_NOXAGE_DEPLOY_BLOCK
 NEXT_PUBLIC_NOXAGE_CONFIDENTIAL_USDC_ADDRESS
 NEXT_PUBLIC_NOXAGE_CONFIDENTIAL_WETH_ADDRESS
 NEXT_PUBLIC_MOCK_USDC_ADDRESS
@@ -233,8 +234,10 @@ NEXT_PUBLIC_MOCK_WETH_ADDRESS
 ```
 
 The current web client uses the Handle SDK's built-in Ethereum Sepolia gateway,
-NoxCompute, and subgraph configuration. Do not add custom `NEXT_PUBLIC_NOX_*`
-variables unless the client is changed to read them.
+NoxCompute, and subgraph configuration. Custom `NEXT_PUBLIC_NOX_*` values are
+optional, but gateway, NoxCompute, and subgraph must be supplied together. Use
+the fresh deployment metadata for `NEXT_PUBLIC_NOXAGE_DEPLOY_BLOCK`; do not
+reuse the legacy deployment's scan block.
 
 Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS origin with no trailing path, for
 example `https://noxage.vercel.app`.
