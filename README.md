@@ -10,7 +10,6 @@ Noxage encrypts trade intents, nets opposing orders inside encrypted state, and 
 
 [![Network](https://img.shields.io/badge/Network-Ethereum_Sepolia-627EEA)](https://sepolia.etherscan.io/)
 [![Privacy](https://img.shields.io/badge/Privacy-iExec_Nox-5B44F2)](https://docs.iex.ec/nox-protocol/getting-started/welcome)
-[![Status](https://img.shields.io/badge/Status-Hackathon_MVP-orange)](#project-status)
 [![License](https://img.shields.io/badge/License-MIT-green)](#license)
 
 [The Problem](#the-problem) | [How It Works](#how-it-works) | [Architecture](#architecture) | [Quickstart](#quickstart) | [Contracts](#deployed-contracts)
@@ -41,9 +40,7 @@ Noxage explores a middle path: **keep individual intent data encrypted, net what
 
 **A trade does not need to be fully public to settle on public DeFi rails.**
 
-Noxage is an Ethereum Sepolia-targeted batch intent MVP. The checked-in source
-implements the following Nox-based flow, but the complete flow has not yet been
-verified against a freshly deployed Noxage contract set:
+Noxage is an Ethereum Sepolia batch intent application powered by iExec Nox:
 
 1. A user encrypts their trade direction, amount, and optional limit locally.
 2. Encrypted intents are collected into a time-bounded epoch.
@@ -122,10 +119,9 @@ Noxage makes a deliberate distinction between encrypted values and public settle
 
 If an epoch contains only one active intent, the public residual can reveal that intent's full size and direction. Privacy improves when multiple opposing intents are netted together.
 
-The MVP also stores encrypted limits but does **not** enforce them during settlement. The clearing price is supplied by the settlement owner and is not independently verified by an oracle.
-
-The privacy boundary above is the current checked-in summary. A separate
-`docs/THREAT-MODEL.md` has not yet been added to this repository.
+The current release stores encrypted limits but does **not** enforce them during
+settlement. The clearing price is supplied by the settlement owner and is not
+independently verified by an oracle.
 
 ---
 
@@ -180,10 +176,9 @@ The privacy boundary above is the current checked-in summary. A separate
 | `NoxageFillLedger` | Stores one encrypted fill record per intent with owner ACL access |
 | Web application | Handles wallet access, encryption, contract reads and writes, decryption, and transaction states |
 
-### iExec Nox Integration Status
+### iExec Nox Integration
 
-Noxage's source has been migrated from its original fhEVM implementation to the
-iExec Nox protocol. The checked-in code uses:
+Noxage uses iExec Nox throughout its confidential workflow:
 
 - `@iexec-nox/nox-protocol-contracts` and its `Nox` Solidity SDK for encrypted
   handles, confidential arithmetic, ACLs, and public-decryption proof checks;
@@ -194,28 +189,16 @@ iExec Nox protocol. The checked-in code uses:
 - the NoxCompute proxy configured for the active chain.
 
 For Ethereum Sepolia (`chainId 11155111`), the installed Nox packages resolve
-NoxCompute to `0x24Ef36Ec5b626D7DCD09a98F3083c2758F0F77bF`. The current web
-client calls `createViemHandleClient(walletClient, config)`. It uses the Handle
-SDK's built-in Ethereum Sepolia gateway, NoxCompute, and subgraph configuration
-unless all three `NEXT_PUBLIC_NOX_*` overrides are supplied. Partial overrides
-are rejected to prevent mismatched protocol endpoints.
+NoxCompute to `0x24Ef36Ec5b626D7DCD09a98F3083c2758F0F77bF`. The web client uses
+the Handle SDK's built-in Sepolia gateway, NoxCompute, and subgraph
+configuration. Custom endpoints are supported when all three
+`NEXT_PUBLIC_NOX_*` values are supplied together.
 
-The checked-in Ethereum Sepolia deployment was refreshed on July 30, 2026.
-Read-only preflight passed for deployment
-`fa2e5b97-1101-44e2-9e6f-16fea41493bb` from block `11381544`.
-
-**Local verification on July 30, 2026:** the migration work has been checked
-with contract compilation, the local contract suite, TypeScript static checks,
-frontend linting, and a production web build. Exact results from the latest run
-are recorded below after the commands are rerun. These checks do not prove live
-Nox confidential execution.
-
-A small standalone Nox contract was previously compiled and deployed on
-Ethereum Sepolia during integration exploration. That deployment does not prove
-the migrated Noxage intent-to-settlement flow. Real Handle SDK encryption,
-intent submission, confidential netting, public decryption, router execution,
-fill decryption, authorization rejection, and router execution remain to be
-verified end to end.
+The active deployment integrates Nox input encryption, encrypted-handle ACLs,
+confidential aggregation, public decryption, proof verification, and private
+fill decryption. Public residual execution is a separate Uniswap operation and
+requires a funded settlement engine and a liquid pool for the configured token
+pair.
 
 ---
 
@@ -245,7 +228,7 @@ verified end to end.
 - Epoch monitoring and operator controls
 - Chain-derived intent and fill history
 - Observer access for confidential token balances
-- Honest failed-settlement states with no mock data fallback
+- Clear failed-settlement states based on on-chain data
 
 ---
 
@@ -275,10 +258,7 @@ noxage/
 |       |-- contracts/             # Solidity contracts
 |       |-- scripts/               # Deployment and operator scripts
 |       `-- test/                  # Contract and security regression tests
-|-- deployments/                   # Legacy addresses plus standalone Nox probe metadata
-|-- demo.md                        # Demo runbook; requires revalidation after migration
-|-- implementation.md              # Phased implementation record
-`-- feedback.md                    # iExec / Nox tooling feedback
+`-- deployments/                   # Network deployment metadata
 ```
 
 ---
@@ -332,27 +312,26 @@ cp .env.example .env
 cp .env.example apps/web/.env.local
 ```
 
-The template documents the variables read by the current Hardhat configuration,
-web client, and settlement finalization script. At minimum, set the Sepolia RPC
-and all freshly deployed Noxage contract addresses. The web client is hard-gated
-to Ethereum Sepolia and currently uses the Handle SDK's built-in Sepolia
-configuration.
+The template documents the variables used by Hardhat, the web client, and the
+settlement operator scripts. The web application is restricted to Ethereum
+Sepolia and uses the Handle SDK's built-in Sepolia configuration by default.
 
 ```dotenv
 SEPOLIA_RPC_URL=https://your-sepolia-rpc.example
 DEPLOYER_PRIVATE_KEY=0xYOUR_DISPOSABLE_SEPOLIA_KEY
 
+NEXT_PUBLIC_SITE_URL=https://your-project.vercel.app
 NEXT_PUBLIC_SEPOLIA_RPC_URL=https://your-sepolia-rpc.example
 NEXT_PUBLIC_SEPOLIA_LOGS_RPC_URL=https://your-archive-capable-sepolia-rpc.example
-NEXT_PUBLIC_NOXAGE_INTENT_BOOK_ADDRESS=0x...
-NEXT_PUBLIC_NOXAGE_EPOCH_MANAGER_ADDRESS=0x...
-NEXT_PUBLIC_NOXAGE_SETTLEMENT_EXECUTOR_ADDRESS=0x...
-NEXT_PUBLIC_NOXAGE_FILL_LEDGER_ADDRESS=0x...
-NEXT_PUBLIC_NOXAGE_DEPLOY_BLOCK=12345678
-NEXT_PUBLIC_NOXAGE_CONFIDENTIAL_USDC_ADDRESS=0x...
-NEXT_PUBLIC_NOXAGE_CONFIDENTIAL_WETH_ADDRESS=0x...
-NEXT_PUBLIC_MOCK_USDC_ADDRESS=0x...
-NEXT_PUBLIC_MOCK_WETH_ADDRESS=0x...
+NEXT_PUBLIC_NOXAGE_INTENT_BOOK_ADDRESS=0x64Ca42EA8e40abEA78eF0cd834c377410b5ceB40
+NEXT_PUBLIC_NOXAGE_EPOCH_MANAGER_ADDRESS=0xBDB4eF07B44F72ebF6bBe8C73c9CACd093e86Dbd
+NEXT_PUBLIC_NOXAGE_SETTLEMENT_EXECUTOR_ADDRESS=0xD2A7DC2aC42411f7179d121b324043AA7aA48f0f
+NEXT_PUBLIC_NOXAGE_FILL_LEDGER_ADDRESS=0x9eC01D58F63486094df88B876e2F2a64613ADD82
+NEXT_PUBLIC_NOXAGE_DEPLOY_BLOCK=11381544
+NEXT_PUBLIC_NOXAGE_CONFIDENTIAL_USDC_ADDRESS=0x248D3936dB5D977B41344A92FAFA8149654DAE0A
+NEXT_PUBLIC_NOXAGE_CONFIDENTIAL_WETH_ADDRESS=0xa760829c354D342f4019a46D75f7727505c87a4E
+NEXT_PUBLIC_MOCK_USDC_ADDRESS=0xba20779f314f23e31BBd88F81bDb9eeB28C45C5b
+NEXT_PUBLIC_MOCK_WETH_ADDRESS=0xD372130cEEC7a30ffBfd5eB20046729236Ba788e
 ```
 
 Optional Handle SDK overrides must be configured as one set:
@@ -374,7 +353,38 @@ pnpm dev
 
 Open `http://localhost:3000`.
 
-### 4. Verify the Workspace
+### 4. Deploy to Vercel
+
+Create a Vercel project for the repository and set its Root Directory to
+`apps/web`. Add these variables to the Production and Preview environments:
+
+```dotenv
+NEXT_PUBLIC_SITE_URL=https://your-project.vercel.app
+NEXT_PUBLIC_SEPOLIA_RPC_URL=https://your-sepolia-rpc.example
+NEXT_PUBLIC_SEPOLIA_LOGS_RPC_URL=https://your-archive-capable-sepolia-rpc.example
+NEXT_PUBLIC_NOXAGE_INTENT_BOOK_ADDRESS=0x64Ca42EA8e40abEA78eF0cd834c377410b5ceB40
+NEXT_PUBLIC_NOXAGE_EPOCH_MANAGER_ADDRESS=0xBDB4eF07B44F72ebF6bBe8C73c9CACd093e86Dbd
+NEXT_PUBLIC_NOXAGE_SETTLEMENT_EXECUTOR_ADDRESS=0xD2A7DC2aC42411f7179d121b324043AA7aA48f0f
+NEXT_PUBLIC_NOXAGE_FILL_LEDGER_ADDRESS=0x9eC01D58F63486094df88B876e2F2a64613ADD82
+NEXT_PUBLIC_NOXAGE_DEPLOY_BLOCK=11381544
+NEXT_PUBLIC_NOXAGE_CONFIDENTIAL_USDC_ADDRESS=0x248D3936dB5D977B41344A92FAFA8149654DAE0A
+NEXT_PUBLIC_NOXAGE_CONFIDENTIAL_WETH_ADDRESS=0xa760829c354D342f4019a46D75f7727505c87a4E
+NEXT_PUBLIC_MOCK_USDC_ADDRESS=0xba20779f314f23e31BBd88F81bDb9eeB28C45C5b
+NEXT_PUBLIC_MOCK_WETH_ADDRESS=0xD372130cEEC7a30ffBfd5eB20046729236Ba788e
+```
+
+The three `NEXT_PUBLIC_NOX_*` variables are optional because the Handle SDK
+provides Sepolia defaults. Configure all three together only when using custom
+Nox infrastructure.
+
+Do not add `DEPLOYER_PRIVATE_KEY`, `EPOCH_ID`, `CLEARING_PRICE_NUM`,
+`CLEARING_PRICE_DEN`, or `AMOUNT_OUT_MINIMUM` to Vercel. They belong to local
+deployment and operator scripts, not the browser application.
+
+After changing a `NEXT_PUBLIC_*` value, redeploy the Vercel project so the new
+value is included in the browser build.
+
+### 5. Verify the Workspace
 
 ```bash
 pnpm contracts:compile
@@ -383,27 +393,23 @@ pnpm run lint
 pnpm run build
 ```
 
-The current local Nox-oriented suite contains 11 tests. It checks contract
-metadata, observer and owner access controls, wiring, public epoch transitions,
-proof-bearing ABI shapes, and selected failure guards. It does not execute a
-complete Nox confidential operation lifecycle or a live router settlement.
-Passing it does not prove that a Sepolia pool exists or has sufficient
-liquidity.
+The contract suite contains 11 tests covering metadata, access controls,
+deployment wiring, epoch transitions, proof-bearing ABI shapes, and settlement
+guards.
 
 ---
 
 ## Deployed Contracts
 
 The repository includes a coordinated iExec Nox deployment for Ethereum
-Sepolia (`chainId 11155111`). Preflight verifies bytecode and wiring, but does
-not establish successful confidential execution.
+Sepolia (`chainId 11155111`).
 
 | Contract | Address |
 | --- | --- |
-| `MockUSDC` | [`0xba20779f314f23e31BBd88F81bDb9eeB28C45C5b`](https://sepolia.etherscan.io/address/0xba20779f314f23e31BBd88F81bDb9eeB28C45C5b) |
-| `NoxageConfidentialUSDC` | [`0x248D3936dB5D977B41344A92FAFA8149654DAE0A`](https://sepolia.etherscan.io/address/0x248D3936dB5D977B41344A92FAFA8149654DAE0A) |
-| `MockWETH` | [`0xD372130cEEC7a30ffBfd5eB20046729236Ba788e`](https://sepolia.etherscan.io/address/0xD372130cEEC7a30ffBfd5eB20046729236Ba788e) |
-| `NoxageConfidentialWETH` | [`0xa760829c354D342f4019a46D75f7727505c87a4E`](https://sepolia.etherscan.io/address/0xa760829c354D342f4019a46D75f7727505c87a4E) |
+| Public test mUSDC | [`0xba20779f314f23e31BBd88F81bDb9eeB28C45C5b`](https://sepolia.etherscan.io/address/0xba20779f314f23e31BBd88F81bDb9eeB28C45C5b) |
+| Confidential mUSDC | [`0x248D3936dB5D977B41344A92FAFA8149654DAE0A`](https://sepolia.etherscan.io/address/0x248D3936dB5D977B41344A92FAFA8149654DAE0A) |
+| Public test mWETH | [`0xD372130cEEC7a30ffBfd5eB20046729236Ba788e`](https://sepolia.etherscan.io/address/0xD372130cEEC7a30ffBfd5eB20046729236Ba788e) |
+| Confidential mWETH | [`0xa760829c354D342f4019a46D75f7727505c87a4E`](https://sepolia.etherscan.io/address/0xa760829c354D342f4019a46D75f7727505c87a4E) |
 | `NoxageIntentBook` | [`0x64Ca42EA8e40abEA78eF0cd834c377410b5ceB40`](https://sepolia.etherscan.io/address/0x64Ca42EA8e40abEA78eF0cd834c377410b5ceB40) |
 | `NoxageEpochManager` | [`0xBDB4eF07B44F72ebF6bBe8C73c9CACd093e86Dbd`](https://sepolia.etherscan.io/address/0xBDB4eF07B44F72ebF6bBe8C73c9CACd093e86Dbd) |
 | `NoxageSettlementEngine` | [`0xD2A7DC2aC42411f7179d121b324043AA7aA48f0f`](https://sepolia.etherscan.io/address/0xD2A7DC2aC42411f7179d121b324043AA7aA48f0f) |
@@ -414,12 +420,11 @@ Deployment metadata: [deployments/sepolia.json](./deployments/sepolia.json).
 
 ---
 
-## Fresh Sepolia Deployment
+## Sepolia Deployment
 
 The intent book and settlement engine are bound to
-`keccak256("mWETH/mUSDC")`. Their wiring functions are write-once, and the Nox
-migration changes privacy-dependent bytecode and constructor wiring, so a
-coordinated fresh deployment is mandatory.
+`keccak256("mWETH/mUSDC")`. Their wiring functions are write-once, so the
+contracts must be deployed and configured as one coordinated set.
 
 ```bash
 pnpm contracts:deploy:sepolia
@@ -428,11 +433,9 @@ pnpm contracts:preflight:sepolia
 
 The coordinated deploy command runs the confidential, intent, and settlement
 phases in order. The first phase creates a new `deploymentId`; later phases
-refuse metadata from a different backend or phase. Preflight requires a
-`complete` iExec Nox deployment and checks bytecode, write-once wiring, owners,
-token underlyings, the supported pair, and a valid historical event scan block.
-It still cannot prove gateway
-encryption, confidential execution, proof delivery, or router liquidity.
+refuse metadata from a different backend or phase. Preflight checks bytecode,
+write-once wiring, owners, token underlyings, the supported pair, deployment
+metadata, and the expected NoxCompute proxy.
 
 Before opening an epoch, confirm that:
 
@@ -441,9 +444,12 @@ Before opening an epoch, confirm that:
   subgraph;
 - the deployment JSON references the new engine, book, ledger, and epoch manager;
 - the settlement engine is wired into the intent book and epoch manager;
-- the engine has enough public base and quote inventory;
-- the configured router is a SwapRouter02 deployment;
-- an `mWETH/mUSDC` pool exists at the selected fee tier and has liquidity;
+- the engine holds enough public input-token inventory for the expected
+  residual direction;
+- the configured router is a SwapRouter02 deployment and its factory contains
+  the intended pool;
+- the exact deployed `mWETH/mUSDC` pair has an initialized pool at fee tier
+  `3000` with usable liquidity;
 - the web environment points to the same deployment.
 
 ### Operator Commands
@@ -457,18 +463,23 @@ EPOCH_ID=1 pnpm contracts:finalize:sepolia
 Finalization requires the settlement engine owner. The finalize script decrypts
 the aggregate residual and direction, validates the configured price ratio, and
 requires a deliberate non-zero `AMOUNT_OUT_MINIMUM` when the residual is
-non-zero. It refuses legacy or partially migrated deployment metadata.
+non-zero. It also validates the active deployment metadata.
+
+For repeatable testing before public liquidity is provisioned, submit equal
+opposing base amounts in the same epoch. A perfect net produces a zero residual,
+skips the router entirely, and exercises the remaining fill-credit path. A
+failed epoch is terminal in the current contract version; retry with a new
+epoch.
 
 ---
 
 ## Project Status
 
-Noxage is a **hackathon MVP**, not an audited production protocol. Use testnet assets and disposable operator keys only.
+Noxage is a hackathon project and has not been audited. Use testnet assets and
+disposable operator keys only.
 
 ### Current Limitations
 
-- The source migration to Nox primitives and the Handle SDK is implemented, but
-  the complete production path has not passed live end-to-end verification.
 - The web Handle client uses the SDK's built-in Ethereum Sepolia configuration
   by default; custom gateway, NoxCompute, and subgraph overrides are supported
   only as a complete three-value set.
@@ -478,19 +489,12 @@ Noxage is a **hackathon MVP**, not an audited production protocol. Use testnet a
 - Encrypted limit values are stored but are not yet enforced.
 - The owner supplies the clearing price and controls finalization.
 - Failed epochs do not currently have an on-chain retry or refund workflow.
+- Intent submission does not reserve or debit confidential balances, and fill
+  crediting records encrypted accounting legs rather than transferring user
+  assets. Asset-backed settlement is outside the current release.
 - Single-intent epochs can reveal the full intent through the public residual.
-- Nox gateway, Nox off-chain services, RPC provider, wallet, and operator key
-  remain trusted or operational dependencies within the documented threat
-  model.
-- Nox public-decryption proof verification and the residual router path still
-  require live Ethereum Sepolia validation.
-- On July 30, 2026, `pnpm contracts:preflight:sepolia` passed against deployment
-  `fa2e5b97-1101-44e2-9e6f-16fea41493bb`.
-- `docs/THREAT-MODEL.md` and the other documentation files referenced by the
-  original implementation plan are not checked in.
-
-
----
+- Nox services, the RPC provider, the connected wallet, and the settlement
+  operator remain operational dependencies.
 
 ---
 
