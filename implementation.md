@@ -2,7 +2,7 @@
 
 > **Product name:** Noxage  
 > **Tagline:** *Public liquidity. Private strategy.*  
-> **Status (July 30, 2026):** Nox source migration implemented; local checks pass; fresh Noxage Sepolia deployment and live end-to-end verification remain open  
+> **Status (July 30, 2026):** Nox source migration and fresh Sepolia deployment complete; preflight passes; live confidential end-to-end verification remains open  
 > **Network:** Ethereum Sepolia (hackathon requirement)  
 > **Privacy layer:** iExec Nox protocol contracts, NoxCompute, and Handle SDK  
 > **Document role:** Historical plan plus current implementation and verification record  
@@ -28,8 +28,8 @@ Verification run on July 30, 2026:
 - `pnpm contracts:check`: passed;
 - `pnpm run build`: passed with non-fatal social-image font warnings;
 - `pnpm run lint`: zero errors and one existing stub warning;
-- `pnpm contracts:preflight:sepolia`: executed and intentionally failed because
-  `deployments/sepolia.json` is explicitly legacy pre-Nox metadata.
+- `pnpm contracts:preflight:sepolia`: passed against deployment
+  `fa2e5b97-1101-44e2-9e6f-16fea41493bb` from block `11381544`.
 
 These results verify source consistency and local behavior. They do not verify
 live Handle encryption, NoxCompute execution, proof delivery, router liquidity,
@@ -436,10 +436,10 @@ and router execution remain observable.
 - [ ] Standalone `docs/THREAT-MODEL.md` checked in  
 
 **Verification note (July 30, 2026):** the migrated local suite reports 11
-passing tests. The checked-in Sepolia deployment metadata is legacy pre-Nox
-metadata. No claim is made that either perfect-net or non-zero-residual Noxage
-settlement has succeeded on the fresh migrated contracts. Operator scripts
-exist, but their successful live use remains unverified.
+passing tests. Fresh deployment
+`fa2e5b97-1101-44e2-9e6f-16fea41493bb` passed read-only Sepolia preflight, and
+epoch `#1` is open. No claim is made that either perfect-net or
+non-zero-residual Noxage settlement has completed through live Nox services.
 
 ---
 

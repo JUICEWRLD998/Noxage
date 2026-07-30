@@ -148,8 +148,9 @@ Completed or observed:
   phase mixing with legacy or unrelated metadata.
 - A read-only Sepolia preflight checks code, owners, wiring, token underlyings,
   and pair configuration before operator actions.
-- On July 30, 2026, that preflight was executed and refused the checked-in
-  legacy pre-Nox deployment metadata as designed.
+- On July 30, 2026, a fresh coordinated Noxage deployment completed and the
+  read-only Sepolia preflight passed for deployment
+  `fa2e5b97-1101-44e2-9e6f-16fea41493bb`.
 
 Still required:
 

@@ -1,18 +1,23 @@
 {
   "chainId": 11155111,
   "network": "sepolia",
-  "note": "LEGACY PRE-NOX DEPLOYMENT. These addresses do not identify the migrated Nox contracts and must not be used as migration verification. Replace this file only after a coordinated fresh deployment.",
+  "privacyBackend": "iexec-nox",
+  "migrationStage": "complete",
+  "deploymentId": "fa2e5b97-1101-44e2-9e6f-16fea41493bb",
+  "deployedBy": "0x866df327dF560c24d2BA0f85aFd95cBff43cf06C",
   "contracts": {
-    "MockUSDC": "0x2745eaFb07Aee70e8c8122c58995AA38FC3bb71D",
-    "NoxageConfidentialUSDC": "0x15caB567a82cfF81B21d8d5d00eEEb4088e9F0a7",
-    "MockWETH": "0xb9e937Ed67125D30d82b48aB9Ec234b1B39c9176",
-    "NoxageConfidentialWETH": "0x5D228c8976178725a723C14A6BD6Fa5Bc35004Cb",
-    "NoxageIntentBook": "0x3D979f0F9e2cCd1810494F3453BE7527270F3C00",
-    "NoxageEpochManager": "0xECEc54293a5e13cB759b063583b6aA462AB762f5",
-    "NoxageSettlementEngine": "0x014F91cbCe438bd91CEE9b65d55F1Db755F6CBA2",
-    "NoxageSettlementExecutor": "0x014F91cbCe438bd91CEE9b65d55F1Db755F6CBA2",
-    "NoxageFillLedger": "0x2b2241C094c19D227418f1fA2a98C42Bd08A2113",
-    "UniswapV3SwapRouter": "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E"
+    "MockUSDC": "0xba20779f314f23e31BBd88F81bDb9eeB28C45C5b",
+    "NoxageConfidentialUSDC": "0x248D3936dB5D977B41344A92FAFA8149654DAE0A",
+    "MockWETH": "0xD372130cEEC7a30ffBfd5eB20046729236Ba788e",
+    "NoxageConfidentialWETH": "0xa760829c354D342f4019a46D75f7727505c87a4E",
+    "UniswapV3SwapRouter": "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
+    "NoxageEpochManager": "0xBDB4eF07B44F72ebF6bBe8C73c9CACd093e86Dbd",
+    "NoxageIntentBook": "0x64Ca42EA8e40abEA78eF0cd834c377410b5ceB40",
+    "NoxageFillLedger": "0x9eC01D58F63486094df88B876e2F2a64613ADD82",
+    "NoxageSettlementEngine": "0xD2A7DC2aC42411f7179d121b324043AA7aA48f0f",
+    "NoxageSettlementExecutor": "0xD2A7DC2aC42411f7179d121b324043AA7aA48f0f"
   },
-  "updatedAt": "2026-07-26T09:37:14.854Z"
+  "updatedAt": "2026-07-30T09:15:02.683Z",
+  "deployBlock": 11381544,
+  "note": "Fresh coordinated iExec Nox deployment. Sepolia preflight passed on July 30, 2026."
 }

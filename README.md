@@ -200,9 +200,9 @@ SDK's built-in Ethereum Sepolia gateway, NoxCompute, and subgraph configuration
 unless all three `NEXT_PUBLIC_NOX_*` overrides are supplied. Partial overrides
 are rejected to prevent mismatched protocol endpoints.
 
-Source migration does not make the checked-in deployment current. A coordinated
-fresh Ethereum Sepolia deployment and new deployment metadata are still
-required.
+The checked-in Ethereum Sepolia deployment was refreshed on July 30, 2026.
+Read-only preflight passed for deployment
+`fa2e5b97-1101-44e2-9e6f-16fea41493bb` from block `11381544`.
 
 **Local verification on July 30, 2026:** the migration work has been checked
 with contract compilation, the local contract suite, TypeScript static checks,
@@ -214,8 +214,8 @@ A small standalone Nox contract was previously compiled and deployed on
 Ethereum Sepolia during integration exploration. That deployment does not prove
 the migrated Noxage intent-to-settlement flow. Real Handle SDK encryption,
 intent submission, confidential netting, public decryption, router execution,
-fill decryption, authorization rejection, and a fresh complete Noxage Sepolia
-deployment remain to be verified.
+fill decryption, authorization rejection, and router execution remain to be
+verified end to end.
 
 ---
 
@@ -394,24 +394,23 @@ liquidity.
 
 ## Deployed Contracts
 
-The repository includes legacy deployment metadata for Ethereum Sepolia
-(`chainId 11155111`). These addresses belong to the pre-Nox settlement
-deployment and must not be used as proof of a migrated Nox integration.
+The repository includes a coordinated iExec Nox deployment for Ethereum
+Sepolia (`chainId 11155111`). Preflight verifies bytecode and wiring, but does
+not establish successful confidential execution.
 
 | Contract | Address |
 | --- | --- |
-| `MockUSDC` | [`0x2745eaFb07Aee70e8c8122c58995AA38FC3bb71D`](https://sepolia.etherscan.io/address/0x2745eaFb07Aee70e8c8122c58995AA38FC3bb71D) |
-| `NoxageConfidentialUSDC` | [`0x15caB567a82cfF81B21d8d5d00eEEb4088e9F0a7`](https://sepolia.etherscan.io/address/0x15caB567a82cfF81B21d8d5d00eEEb4088e9F0a7) |
-| `MockWETH` | [`0xb9e937Ed67125D30d82b48aB9Ec234b1B39c9176`](https://sepolia.etherscan.io/address/0xb9e937Ed67125D30d82b48aB9Ec234b1B39c9176) |
-| `NoxageConfidentialWETH` | [`0x5D228c8976178725a723C14A6BD6Fa5Bc35004Cb`](https://sepolia.etherscan.io/address/0x5D228c8976178725a723C14A6BD6Fa5Bc35004Cb) |
-| `NoxageIntentBook` | [`0x3D979f0F9e2cCd1810494F3453BE7527270F3C00`](https://sepolia.etherscan.io/address/0x3D979f0F9e2cCd1810494F3453BE7527270F3C00) |
-| `NoxageEpochManager` | [`0xECEc54293a5e13cB759b063583b6aA462AB762f5`](https://sepolia.etherscan.io/address/0xECEc54293a5e13cB759b063583b6aA462AB762f5) |
-| `NoxageSettlementEngine` | [`0x014F91cbCe438bd91CEE9b65d55F1Db755F6CBA2`](https://sepolia.etherscan.io/address/0x014F91cbCe438bd91CEE9b65d55F1Db755F6CBA2) |
-| `NoxageFillLedger` | [`0x2b2241C094c19D227418f1fA2a98C42Bd08A2113`](https://sepolia.etherscan.io/address/0x2b2241C094c19D227418f1fA2a98C42Bd08A2113) |
+| `MockUSDC` | [`0xba20779f314f23e31BBd88F81bDb9eeB28C45C5b`](https://sepolia.etherscan.io/address/0xba20779f314f23e31BBd88F81bDb9eeB28C45C5b) |
+| `NoxageConfidentialUSDC` | [`0x248D3936dB5D977B41344A92FAFA8149654DAE0A`](https://sepolia.etherscan.io/address/0x248D3936dB5D977B41344A92FAFA8149654DAE0A) |
+| `MockWETH` | [`0xD372130cEEC7a30ffBfd5eB20046729236Ba788e`](https://sepolia.etherscan.io/address/0xD372130cEEC7a30ffBfd5eB20046729236Ba788e) |
+| `NoxageConfidentialWETH` | [`0xa760829c354D342f4019a46D75f7727505c87a4E`](https://sepolia.etherscan.io/address/0xa760829c354D342f4019a46D75f7727505c87a4E) |
+| `NoxageIntentBook` | [`0x64Ca42EA8e40abEA78eF0cd834c377410b5ceB40`](https://sepolia.etherscan.io/address/0x64Ca42EA8e40abEA78eF0cd834c377410b5ceB40) |
+| `NoxageEpochManager` | [`0xBDB4eF07B44F72ebF6bBe8C73c9CACd093e86Dbd`](https://sepolia.etherscan.io/address/0xBDB4eF07B44F72ebF6bBe8C73c9CACd093e86Dbd) |
+| `NoxageSettlementEngine` | [`0xD2A7DC2aC42411f7179d121b324043AA7aA48f0f`](https://sepolia.etherscan.io/address/0xD2A7DC2aC42411f7179d121b324043AA7aA48f0f) |
+| `NoxageFillLedger` | [`0x9eC01D58F63486094df88B876e2F2a64613ADD82`](https://sepolia.etherscan.io/address/0x9eC01D58F63486094df88B876e2F2a64613ADD82) |
 | `UniswapV3SwapRouter` | [`0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E`](https://sepolia.etherscan.io/address/0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E) |
 
-Legacy metadata: [deployments/sepolia.json](./deployments/sepolia.json). Replace
-it only after the migrated contracts have been freshly deployed and verified.
+Deployment metadata: [deployments/sepolia.json](./deployments/sepolia.json).
 
 ---
 
@@ -475,9 +474,6 @@ Noxage is a **hackathon MVP**, not an audited production protocol. Use testnet a
   only as a complete three-value set.
 - Intent direction is represented as encrypted `bool`; amounts, limits,
   confidential balances, and fill legs use encrypted `uint256`.
-- The legacy Sepolia addresses above are not Noxage's migrated deployment.
-- The checked-in Sepolia settlement deployment predates the SwapRouter02 interface correction in the source.
-- A fresh coordinated deployment is required before testing non-zero residual settlement with the current code.
 - Non-zero residual execution also requires a funded settlement engine and a liquid `mWETH/mUSDC` Sepolia pool.
 - Encrypted limit values are stored but are not yet enforced.
 - The owner supplies the clearing price and controls finalization.
@@ -488,9 +484,8 @@ Noxage is a **hackathon MVP**, not an audited production protocol. Use testnet a
   model.
 - Nox public-decryption proof verification and the residual router path still
   require live Ethereum Sepolia validation.
-- On July 30, 2026, `pnpm contracts:preflight:sepolia` was run and correctly
-  stopped because `deployments/sepolia.json` is marked as legacy pre-Nox
-  metadata, not a complete coordinated Nox deployment.
+- On July 30, 2026, `pnpm contracts:preflight:sepolia` passed against deployment
+  `fa2e5b97-1101-44e2-9e6f-16fea41493bb`.
 - `docs/THREAT-MODEL.md` and the other documentation files referenced by the
   original implementation plan are not checked in.
 

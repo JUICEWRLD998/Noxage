@@ -2,10 +2,9 @@
 
 > **Migration gate (July 30, 2026):** this is a target recording script, not a
 > record of a completed Noxage Nox demo. Do not record or present the workflow
-> until a fresh coordinated deployment exists, `pnpm
-> contracts:preflight:sepolia` passes, and every action in the pre-recording
-> checklist has been exercised against that deployment. The checked-in
-> `deployments/sepolia.json` is legacy pre-Nox metadata.
+> until every action in the pre-recording checklist has been exercised against
+> deployment `fa2e5b97-1101-44e2-9e6f-16fea41493bb`. The fresh deployment and
+> read-only Sepolia preflight completed on July 30, 2026.
 
 ## Demo Goal
 
@@ -236,8 +235,7 @@ NEXT_PUBLIC_MOCK_WETH_ADDRESS
 The current web client uses the Handle SDK's built-in Ethereum Sepolia gateway,
 NoxCompute, and subgraph configuration. Custom `NEXT_PUBLIC_NOX_*` values are
 optional, but gateway, NoxCompute, and subgraph must be supplied together. Use
-the fresh deployment metadata for `NEXT_PUBLIC_NOXAGE_DEPLOY_BLOCK`; do not
-reuse the legacy deployment's scan block.
+deployment block `11381544` for `NEXT_PUBLIC_NOXAGE_DEPLOY_BLOCK`.
 
 Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS origin with no trailing path, for
 example `https://noxage.vercel.app`.
