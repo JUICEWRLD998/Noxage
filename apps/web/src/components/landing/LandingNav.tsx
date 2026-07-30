@@ -8,9 +8,6 @@ export function LandingNav() {
     <header className={styles.nav}>
       <div className={styles.inner}>
         <Link href="/" className={styles.brand}>
-          <span className={styles.brandMark} aria-hidden="true">
-            ◆
-          </span>
           Noxage
         </Link>
 

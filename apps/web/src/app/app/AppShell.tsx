@@ -45,7 +45,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <header className={styles.topbar}>
               <Link href="/" className={styles.brand}>
-                <span className={styles.brandMark}>◆</span> Noxage
+                Noxage
               </Link>
 
               <nav className={styles.nav} aria-label="App sections">
