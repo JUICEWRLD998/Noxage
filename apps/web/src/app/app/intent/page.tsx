@@ -20,8 +20,8 @@ import { MVP_PAIR_LABEL, TOKENS } from "@/lib/contracts";
 import { parseAmount } from "@/lib/format";
 import styles from "./intent.module.css";
 
-// Intent amounts are in confidential (6-decimal) base units. Base = mWETH.
-const CONF_DECIMALS = TOKENS.WETH.confidentialDecimals;
+const BASE_DECIMALS = TOKENS.WETH.confidentialDecimals;
+const QUOTE_DECIMALS = TOKENS.USDC.confidentialDecimals;
 
 type Side = 0 | 1;
 
@@ -36,8 +36,8 @@ export default function IntentPage() {
   const [amount, setAmount] = useState("");
   const [limit, setLimit] = useState("");
 
-  const parsedAmount = parseAmount(amount, CONF_DECIMALS);
-  const parsedLimit = limit ? parseAmount(limit, CONF_DECIMALS) : 0n;
+  const parsedAmount = parseAmount(amount, BASE_DECIMALS);
+  const parsedLimit = limit ? parseAmount(limit, QUOTE_DECIMALS) : 0n;
   const amountError =
     amount && (parsedAmount === null || parsedAmount <= 0n)
       ? "Enter a valid amount"

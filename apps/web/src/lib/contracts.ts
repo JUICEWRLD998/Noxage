@@ -77,11 +77,7 @@ export interface TokenMeta {
   symbol: string;
   /** Underlying public ERC-20 (the mock faucet token) decimals. */
   decimals: number;
-  /**
-   * Confidential-balance decimals. The ERC7984 wrapper caps at maxDecimals = 6,
-   * so confidential balances are always stored in 6-decimal units regardless of
-   * the underlying token's decimals.
-   */
+  /** Confidential balances preserve the underlying token's native decimals. */
   confidentialDecimals: number;
   /** Public ERC-20 (mock, faucet-mintable). */
   mock: Address;
@@ -102,7 +98,7 @@ export const TOKENS: Record<TokenKey, TokenMeta> = {
     key: "WETH",
     symbol: "mWETH",
     decimals: 18,
-    confidentialDecimals: 6,
+    confidentialDecimals: 18,
     mock: addresses.mockWETH,
     confidential: addresses.confidentialWETH,
   },

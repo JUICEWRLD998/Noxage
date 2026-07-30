@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {FHE, euint8, euint64, externalEuint8, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
-import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
+import {
+    Nox,
+    ebool,
+    euint256,
+    externalEbool,
+    externalEuint256
+} from "@iexec-nox/nox-protocol-contracts/contracts/sdk/Nox.sol";
 import {NoxageEpochManager} from "./NoxageEpochManager.sol";
 
 /**
@@ -10,22 +15,21 @@ import {NoxageEpochManager} from "./NoxageEpochManager.sol";
  * @notice Accepts confidential trade intents and seals them into the currently
  *         open epoch of {NoxageEpochManager}.
  *
- * An intent's sensitive fields are submitted as FHE ciphertext handles produced
- * client-side and verified on-chain via {FHE-fromExternal}:
+ * An intent's sensitive fields are submitted as Nox handles produced
+ * client-side and verified on-chain via {Nox-fromExternal}:
  *
- *   - `side`   euint8  — 0 = sell base / 1 = buy base (direction, encrypted)
- *   - `amount` euint64 — size in base-token units (encrypted)
- *   - `limit`  euint64 — optional limit price; encrypted 0 means "no limit"
+ *   - `side`   ebool    - false = sell base / true = buy base
+ *   - `amount` euint256 - size in base-token units
+ *   - `limit`  euint256 - optional limit price; encrypted 0 means "no limit"
  *
  * The trading `pair` and `deadline` are public by design (the token pair of any
  * residual flow is visible anyway; see the privacy claims in implementation.md).
  * Amounts, directions, and limits never appear in plaintext on-chain or in events.
  *
- * ACL: the submitter and this contract are granted persistent FHE access to each
- * handle. The Phase 4 settlement engine is granted access when it is wired, so
- * it can homomorphically net the batch without learning any individual size.
+ * ACL: the submitter can decrypt their handles as a viewer, while this contract
+ * and the settlement engine receive computation access.
  */
-contract NoxageIntentBook is ZamaEthereumConfig {
+contract NoxageIntentBook {
     NoxageEpochManager public immutable epochManager;
     bytes32 public immutable supportedPair;
 
@@ -41,9 +45,9 @@ contract NoxageIntentBook is ZamaEthereumConfig {
         bytes32 pair; // public market id, e.g. keccak256("mWETH/mUSDC")
         uint64 deadline; // public unix deadline
         IntentStatus status;
-        euint8 side; // encrypted direction
-        euint64 amount; // encrypted size
-        euint64 limit; // encrypted limit price (0 == none)
+        ebool side; // encrypted direction
+        euint256 amount; // encrypted size
+        euint256 limit; // encrypted limit price (0 == none)
     }
 
     /// @notice All intents by id (ids are globally unique and monotonically increasing).
@@ -54,7 +58,7 @@ contract NoxageIntentBook is ZamaEthereumConfig {
 
     uint256 public intentCount;
 
-    /// @notice Settlement engine granted FHE ACL access to intent handles so it
+    /// @notice Settlement engine granted Nox ACL access to intent handles so it
     ///         can net the batch. Set once by the epoch manager's owner before
     ///         epochs open. Zero until wired.
     address public settlementEngine;
@@ -88,7 +92,7 @@ contract NoxageIntentBook is ZamaEthereumConfig {
     /**
      * @notice Wire the settlement engine once. Callable only by the epoch
      *         manager's owner; immutable after the first set. Intents submitted
-     *         after this grant the engine ACL access to their encrypted fields.
+     *         after this grant the engine computation access to their fields.
      */
     function setSettlementEngine(address settlementEngine_) external {
         if (msg.sender != epochManager.owner()) revert NotOwner();
@@ -102,19 +106,23 @@ contract NoxageIntentBook is ZamaEthereumConfig {
      * @notice Submit a confidential intent into the currently open epoch.
      * @param pair       Public market identifier for the residual pair.
      * @param deadline   Public unix timestamp after which the intent is stale.
-     * @param sideExt    Encrypted direction handle (externalEuint8).
-     * @param amountExt  Encrypted size handle (externalEuint64).
-     * @param limitExt   Encrypted limit-price handle (externalEuint64; 0 == none).
-     * @param inputProof Single input proof covering all encrypted handles.
+     * @param sideExt    Encrypted direction handle (externalEbool).
+     * @param amountExt  Encrypted size handle (externalEuint256).
+     * @param limitExt   Encrypted limit-price handle (externalEuint256; 0 == none).
+     * @param sideProof   Input proof for `sideExt`.
+     * @param amountProof Input proof for `amountExt`.
+     * @param limitProof  Input proof for `limitExt`.
      * @return intentId  The globally unique id of the new intent.
      */
     function submitIntent(
         bytes32 pair,
         uint64 deadline,
-        externalEuint8 sideExt,
-        externalEuint64 amountExt,
-        externalEuint64 limitExt,
-        bytes calldata inputProof
+        externalEbool sideExt,
+        bytes calldata sideProof,
+        externalEuint256 amountExt,
+        bytes calldata amountProof,
+        externalEuint256 limitExt,
+        bytes calldata limitProof
     ) external returns (uint256 intentId) {
         if (deadline <= block.timestamp) revert DeadlineInPast();
         if (pair != supportedPair) revert UnsupportedPair(pair);
@@ -126,25 +134,26 @@ contract NoxageIntentBook is ZamaEthereumConfig {
 
         // Verify each ciphertext against the proof, turning external handles into
         // usable in-contract handles.
-        euint8 side = FHE.fromExternal(sideExt, inputProof);
-        euint64 amount = FHE.fromExternal(amountExt, inputProof);
-        euint64 limit = FHE.fromExternal(limitExt, inputProof);
+        ebool side = Nox.fromExternal(sideExt, sideProof);
+        euint256 amount = Nox.fromExternal(amountExt, amountProof);
+        euint256 limit = Nox.fromExternal(limitExt, limitProof);
 
-        // Grant persistent ACL access: this contract (for later settlement wiring)
-        // and the submitter (so they can always decrypt their own intent).
-        FHE.allowThis(side);
-        FHE.allowThis(amount);
-        FHE.allowThis(limit);
-        FHE.allow(side, msg.sender);
-        FHE.allow(amount, msg.sender);
-        FHE.allow(limit, msg.sender);
+        Nox.allowThis(side);
+        Nox.allowThis(amount);
+        Nox.allowThis(limit);
+        Nox.allow(side, msg.sender);
+        Nox.allow(amount, msg.sender);
+        Nox.allow(limit, msg.sender);
+        Nox.addViewer(side, msg.sender);
+        Nox.addViewer(amount, msg.sender);
+        Nox.addViewer(limit, msg.sender);
 
         // Grant the settlement engine access so it can net this intent in-epoch.
         address engine = settlementEngine;
         if (engine != address(0)) {
-            FHE.allow(side, engine);
-            FHE.allow(amount, engine);
-            FHE.allow(limit, engine);
+            Nox.allow(side, engine);
+            Nox.allow(amount, engine);
+            Nox.allow(limit, engine);
         }
 
         intentId = ++intentCount;
@@ -194,7 +203,7 @@ contract NoxageIntentBook is ZamaEthereumConfig {
     function intentHandles(uint256 intentId)
         external
         view
-        returns (euint8 side, euint64 amount, euint64 limit)
+        returns (ebool side, euint256 amount, euint256 limit)
     {
         Intent storage intent = _intents[intentId];
         return (intent.side, intent.amount, intent.limit);

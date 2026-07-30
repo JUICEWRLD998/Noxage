@@ -84,10 +84,21 @@ export const confidentialTokenAbi = [
   },
   {
     type: "function",
-    name: "rate",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ type: "uint256" }],
+    name: "finalizeUnwrap",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "unwrapRequestId", type: "bytes32" },
+      { name: "decryptedAmountAndProof", type: "bytes" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "event",
+    name: "UnwrapRequested",
+    inputs: [
+      { name: "receiver", type: "address", indexed: true },
+      { name: "amount", type: "bytes32", indexed: false },
+    ],
   },
   {
     type: "function",
@@ -126,9 +137,11 @@ export const intentBookAbi = [
       { name: "pair", type: "bytes32" },
       { name: "deadline", type: "uint64" },
       { name: "sideExt", type: "bytes32" },
+      { name: "sideProof", type: "bytes" },
       { name: "amountExt", type: "bytes32" },
+      { name: "amountProof", type: "bytes" },
       { name: "limitExt", type: "bytes32" },
-      { name: "inputProof", type: "bytes" },
+      { name: "limitProof", type: "bytes" },
     ],
     outputs: [{ name: "intentId", type: "uint256" }],
   },
@@ -175,7 +188,7 @@ export const intentBookAbi = [
     ],
   },
   {
-    // Encrypted field handles (euint8/euint64 surface as bytes32 in the ABI).
+    // Nox encrypted handles surface as bytes32 in the ABI.
     type: "function",
     name: "intentHandles",
     stateMutability: "view",
@@ -325,7 +338,7 @@ export const fillLedgerAbi = [
     ],
   },
   {
-    // Encrypted fill legs (euint64 handles surface as bytes32 in the ABI).
+    // Nox encrypted fill handles surface as bytes32 in the ABI.
     type: "function",
     name: "fillHandles",
     stateMutability: "view",
@@ -372,12 +385,11 @@ export const settlementEngineAbi = [
     stateMutability: "nonpayable",
     inputs: [
       { name: "epochId", type: "uint256" },
-      { name: "residualBase", type: "uint64" },
-      { name: "buyHeavy", type: "bool" },
       { name: "priceNum", type: "uint64" },
       { name: "priceDen", type: "uint64" },
       { name: "amountOutMinimum", type: "uint256" },
-      { name: "decryptionProof", type: "bytes" },
+      { name: "residualProof", type: "bytes" },
+      { name: "directionProof", type: "bytes" },
     ],
     outputs: [],
   },

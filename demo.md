@@ -1,5 +1,12 @@
 # Noxage Demo Runbook
 
+> **Migration gate (July 30, 2026):** this is a target recording script, not a
+> record of a completed Noxage Nox demo. Do not record or present the workflow
+> until a fresh coordinated deployment exists, `pnpm
+> contracts:preflight:sepolia` passes, and every action in the pre-recording
+> checklist has been exercised against that deployment. The checked-in
+> `deployments/sepolia.json` is legacy pre-Nox metadata.
+
 ## Demo Goal
 
 Show that Noxage keeps individual trade data confidential while still using
@@ -24,18 +31,20 @@ Target final length: **about 4 minutes**.
 
 1. Start the production candidate locally with `pnpm dev`, or use the deployed
    Vercel URL after verifying it.
-2. Confirm both wallets are connected to Sepolia and have enough gas.
-3. Confirm no epoch is currently open.
-4. Confirm Wallet A is still the owner/operator recognized by the application.
-5. Confirm the faucet, shield, decrypt, observer, intent, epoch, fill, and
+2. Run `pnpm contracts:preflight:sepolia` against the exact deployment used by
+   the web environment.
+3. Confirm both wallets are connected to Sepolia and have enough gas.
+4. Confirm no epoch is currently open.
+5. Confirm Wallet A is still the owner/operator recognized by the application.
+6. Confirm the faucet, shield, decrypt, observer, intent, epoch, fill, and
    unshield actions work before recording.
-6. Prepare Wallet B's full address in a private scratchpad for quick pasting.
-7. Close unrelated tabs, disable notifications, and hide bookmarks containing
+7. Prepare Wallet B's full address in a private scratchpad for quick pasting.
+8. Close unrelated tabs, disable notifications, and hide bookmarks containing
    personal information.
-8. Record wallet approvals, but crop the extension so balances and account
+9. Record wallet approvals, but crop the extension so balances and account
    names unrelated to the demo are not exposed.
-9. Pause briefly after every important state change so the viewer can read it.
-10. Edit out long transaction and KMS waits, but retain the transaction
+10. Pause briefly after every important state change so the viewer can read it.
+11. Edit out long transaction and Nox gateway waits, but retain the transaction
     submission and confirmed result.
 
 ## Four-Minute Recording Plan
@@ -211,21 +220,21 @@ Add these variables to the Vercel project for Production and Preview:
 
 ```text
 NEXT_PUBLIC_SITE_URL
-NEXT_PUBLIC_CHAIN_ID
 NEXT_PUBLIC_SEPOLIA_RPC_URL
 NEXT_PUBLIC_SEPOLIA_LOGS_RPC_URL
 NEXT_PUBLIC_NOXAGE_INTENT_BOOK_ADDRESS
 NEXT_PUBLIC_NOXAGE_EPOCH_MANAGER_ADDRESS
 NEXT_PUBLIC_NOXAGE_SETTLEMENT_EXECUTOR_ADDRESS
 NEXT_PUBLIC_NOXAGE_FILL_LEDGER_ADDRESS
-NEXT_PUBLIC_UNISWAP_V3_ROUTER_ADDRESS
 NEXT_PUBLIC_NOXAGE_CONFIDENTIAL_USDC_ADDRESS
 NEXT_PUBLIC_NOXAGE_CONFIDENTIAL_WETH_ADDRESS
 NEXT_PUBLIC_MOCK_USDC_ADDRESS
 NEXT_PUBLIC_MOCK_WETH_ADDRESS
-NEXT_PUBLIC_FHEVM_RELAYER_URL
-NEXT_PUBLIC_FHEVM_NETWORK
 ```
+
+The current web client uses the Handle SDK's built-in Ethereum Sepolia gateway,
+NoxCompute, and subgraph configuration. Do not add custom `NEXT_PUBLIC_NOX_*`
+variables unless the client is changed to read them.
 
 Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS origin with no trailing path, for
 example `https://noxage.vercel.app`.
@@ -248,6 +257,7 @@ After deployment:
 3. Connect Wallet B and verify the Sepolia network guard.
 4. Connect Wallet A and verify the operator-only controls.
 5. Run one faucet action and one read-only decrypt before recording.
-6. Check the browser console for blocked RPC, relayer, CORS, or content-security
+6. Check the browser console for blocked RPC, Nox gateway, CORS, or
+   content-security
    errors.
 7. Confirm social preview images use the deployed URL rather than localhost.

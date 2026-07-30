@@ -1,11 +1,17 @@
-# Noxage — Implementation Plan
+# Noxage - Implementation Record and Remaining Verification
 
 > **Product name:** Noxage  
 > **Tagline:** *Public liquidity. Private strategy.*  
-> **Status:** Planning complete — **do not start build until go-ahead**  
+> **Status (July 30, 2026):** Nox source migration implemented; local checks pass; fresh Noxage Sepolia deployment and live end-to-end verification remain open  
 > **Network:** Ethereum Sepolia (hackathon requirement)  
-> **Privacy layer:** iExec Nox (confidential smart contracts + TEE)  
-> **UI north star:** `UI-DESIGN-SYSTEM.md` (Noviq playbook) + Noxage product extensions below  
+> **Privacy layer:** iExec Nox protocol contracts, NoxCompute, and Handle SDK  
+> **Document role:** Historical plan plus current implementation and verification record  
+
+The original plan below predates the fhEVM-to-Nox migration. Current source uses
+Nox `ebool` and `euint256` handles, Nox ERC-7984 wrappers, and
+`@iexec-nox/handle`. On July 30, 2026, local checks reported 11 contract tests
+passing, lint with zero errors and one warning, and a successful production web
+build. Those checks do not establish live Sepolia confidential execution.
 
 ---
 
@@ -15,7 +21,12 @@
 
 **Noxage** is a confidential intent + batch-netting settlement layer for open DeFi.
 
-Users submit **encrypted trade (and later borrow) intents**. Nox TEE runners collect intents into **epochs**, **net opposing flow**, and settle **only the residual** on unmodified public protocols (Uniswap first; Aave as stretch). Individual sizes, directions, and strategies never appear in plaintext on-chain. Fills are credited as **confidential balances** (ERC-7984) with **selective disclosure** via Nox ACL.
+Users submit encrypted trade intents into public epochs. The settlement engine
+requests confidential arithmetic through NoxCompute, exposes only the aggregate
+residual and direction for public decryption, and is designed to send a
+non-zero residual to an unmodified SwapRouter02-compatible router. Individual
+fills are stored as Nox handles in `NoxageFillLedger`; confidential token
+balances use Nox ERC-7984 wrappers.
 
 This is infrastructure a fund, DAO, or desk could deploy — not a one-off hackathon skit.
 
@@ -33,7 +44,7 @@ This is infrastructure a fund, DAO, or desk could deploy — not a one-off hacka
 
 1. **Shield** — wrap public ERC-20 → confidential balance  
 2. **Submit intent** — encrypt size/direction/limit; park in epoch  
-3. **Settle** — TEE nets batch; residual hits Uniswap; fills re-encrypted  
+3. **Settle** — NoxCompute nets the batch; the residual is designed to hit Uniswap; fills remain encrypted  
 4. **Decrypt fill** — user (or granted auditor) views own result via ACL  
 5. **Unshield** — optional exit to public ERC-20  
 
@@ -68,9 +79,12 @@ This is infrastructure a fund, DAO, or desk could deploy — not a one-off hacka
 
 ## 1. Product brand & design system
 
-### 1.1 Source of truth
+### 1.1 Historical design source
 
-Primary: **`UI-DESIGN-SYSTEM.md`** (Noviq playbook) — copy into repo as:
+The original plan referenced `UI-DESIGN-SYSTEM.md`, but that file and the
+planned `docs/` directory are not currently checked in. The implemented style
+sources live under `apps/web/src/styles/`. The file list below is retained as
+historical intent, not current repository inventory.
 
 ```
 docs/UI-DESIGN-SYSTEM.md          # full playbook (reference)
@@ -185,7 +199,7 @@ noxage/
 │   ├── THREAT-MODEL.md
 │   └── DEMO-SCRIPT.md
 ├── packages/
-│   ├── contracts/                   # Hardhat + Nox plugin
+│   ├── contracts/                   # Hardhat + installed Nox Solidity packages
 │   │   ├── contracts/
 │   │   ├── scripts/
 │   │   ├── test/
@@ -207,15 +221,14 @@ noxage/
 
 | Layer | Choice | Why |
 |---|---|---|
-| Contracts | Solidity 0.8.x + Nox Hardhat plugin + starter | Official Nox path |
+| Contracts | Solidity 0.8.35 + Hardhat + Nox Solidity packages | Checked-in implementation |
 | Confidential tokens | ERC-7984 / Nox confidential contracts | Native hidden balances |
 | Settlement | Uniswap v3 SwapRouter (Sepolia) | Unmodified public rail |
 | Frontend | Next.js (App Router) + TypeScript | Deployable product |
 | Styling | CSS Modules + tokens (no Tailwind) | Matches design system |
-| Wallet | wagmi + viem + WalletConnect / injected | Real wallets, real txs |
+| Wallet | viem + injected EIP-1193 wallet | Current implementation |
 | Data | TanStack Query | Live epoch/fill polling |
-| Motion | framer-motion + gsap (landing only) | Playbook-aligned |
-| Optional hero | three + R3F + drei | Progressive enhancement |
+| Motion | Framer Motion | Current implementation |
 
 ### 2.3 On-chain / TEE flow
 
@@ -226,16 +239,16 @@ User wallet
 NoxageIntentBook (confidential inputs)
   │ epoch closes
   ▼
-Nox Runner (TEE)
-  │ decrypt · net · clear · produce settlement plan
+NoxCompute
+  │ confidential arithmetic over handles
   ▼
-NoxageSettlementExecutor
+NoxageSettlementEngine
   │ residual only
   ▼
 Uniswap v3 Router (unmodified)
   │
   ▼
-Credit encrypted fills → user confidential balances
+Credit encrypted fill handles → NoxageFillLedger
   │ ACL
   ▼
 User decrypts own fill (auditor optional)
@@ -245,14 +258,15 @@ User decrypts own fill (auditor optional)
 
 | Contract | Responsibility |
 |---|---|
-| `NoxageVault` / wrappers | Shield & unshield public ERC-20 ↔ confidential |
+| `NoxageConfidentialToken` wrappers | Shield and unshield public ERC-20 balances through Nox ERC-7984 |
 | `NoxageIntentBook` | Accept encrypted intents; epoch membership; cancel rules |
 | `NoxageEpochManager` | Epoch id, open/close, status, settlement root/ref |
-| `NoxageNettingEngine` (confidential compute path) | Net intents inside TEE; output residual + per-user fills |
-| `NoxageSettlementExecutor` | Call Uniswap with residual; never sees plaintext user intents on-chain |
+| `NoxageSettlementEngine` | Request confidential netting, verify public-decryption proofs, call the router for a residual, and credit fills |
 | `NoxageFillLedger` | Encrypted fill handles + ACL hooks |
 
-**Design constraint:** public contracts store **handles**, not amounts. Plaintext only inside attested TEE compute.
+**Design constraint:** sensitive contract state stores handles, not plaintext
+amounts. The public residual, direction, clearing price, participants, timing,
+and router execution remain observable.
 
 ### 2.5 Epoch model (product rules)
 
@@ -268,8 +282,8 @@ User decrypts own fill (auditor optional)
 
 | Env | Use |
 |---|---|
-| Local Hardhat + Nox local tooling | Unit + integration tests |
-| ETH Sepolia | Official hackathon deployment |
+| Local Hardhat | ABI, access-control, wiring, and public-state tests |
+| ETH Sepolia | Required fresh deployment and end-to-end verification target |
 | Frontend preview (Vercel or similar) | Public product URL |
 
 ---
@@ -291,8 +305,8 @@ User decrypts own fill (auditor optional)
 2. Scaffold monorepo (`apps/web`, `packages/contracts`).  
 3. Copy `UI-DESIGN-SYSTEM.md` → `docs/UI-DESIGN-SYSTEM.md`.  
 4. Install web stack (Next.js, wagmi, viem, framer-motion, Radix, gsap optional).  
-5. Install contracts stack (Hardhat, Nox plugin, starter patterns).  
-6. Create `.env.example` (RPC, private key deploy-only, WalletConnect project id, Nox endpoints).  
+5. Install contracts stack (Hardhat and Nox Solidity/client packages).  
+6. Create `.env.example` for the variables actually read by Hardhat, the web client, and operator scripts.  
 7. Write stub `README.md` + `docs/ARCHITECTURE.md` outline.  
 8. Create empty `feedback.md` with sections to fill during build.  
 
@@ -346,10 +360,10 @@ User decrypts own fill (auditor optional)
 
 **Definition of Done**
 
-- [ ] Real Sepolia txs for shield/unshield  
-- [ ] Balances not plaintext on-chain  
-- [ ] Tests green locally  
-- [ ] Addresses documented  
+- [ ] Real migrated-Nox Sepolia txs for shield/unshield  
+- [x] Contract source stores confidential balances as Nox handles  
+- [x] Local contract suite passes (11 tests across the migrated suite)  
+- [ ] Fresh migrated deployment addresses documented  
 
 ---
 
@@ -367,9 +381,9 @@ User decrypts own fill (auditor optional)
 
 **Definition of Done**
 
-- [ ] Intents stored as handles only  
-- [ ] Epoch lifecycle works on Sepolia  
-- [ ] Frontend can later poll status from events/RPC  
+- [x] Migrated intent source stores `ebool` and `euint256` handles  
+- [ ] Migrated epoch lifecycle verified on Sepolia  
+- [x] Frontend reads status and history from contract calls and events  
 
 ---
 
@@ -379,13 +393,13 @@ User decrypts own fill (auditor optional)
 
 **Tasks**
 
-1. Define TEE compute payload: list of intents → netting result + residual plan + per-user fills.  
+1. Define confidential netting over Nox handles and the public residual proof flow.  
 2. Implement netting rules (MVP):  
    - Same pair only per epoch (start with one pair, e.g. USDC/WETH)  
    - Sum buy vs sell; residual = |buy − sell| in the heavy direction  
    - Pro-rata or FIFO fill attribution (document choice; prefer **pro-rata** for fairness story)  
-3. Wire Nox confidential compute / runner path per official docs.  
-4. `NoxageSettlementExecutor` calls **unmodified** Uniswap v3 router with residual only.  
+3. Wire Nox confidential operations and public-decryption proof checks.  
+4. `NoxageSettlementEngine` calls an unmodified SwapRouter02-compatible router with the residual only.  
 5. Credit encrypted fills to users; update epoch to `Settled`.  
 6. Failure path: residual swap reverts → epoch `Failed` + safe fund handling.  
 7. Integration test: 2 opposing intents net partially; residual swap executes; both users get fills.  
@@ -393,13 +407,17 @@ User decrypts own fill (auditor optional)
 
 **Definition of Done**
 
-- [x] Multi-intent epoch settles end-to-end (local FHEVM mock; Sepolia via `deploy:settlement:sepolia`)  
-- [x] Residual public swap only (`ISwapRouter.exactInputSingle` / Etherscan on Sepolia)  
-- [x] User fill decryptable via ACL (`NoxageFillLedger` + tests)  
+- [ ] Multi-intent epoch settles end-to-end through live Nox services  
+- [ ] Residual public swap verified against a freshly deployed Noxage engine on Sepolia  
+- [ ] User fill decryption and unauthorized-viewer rejection verified through the Handle SDK  
 - [x] Uniswap contracts not forked/modified  
-- [x] Threat model notes what remains public (`docs/THREAT-MODEL.md`)  
+- [ ] Standalone `docs/THREAT-MODEL.md` checked in  
 
-**Sepolia testing note:** contracts are deployed and tests are green (31/31), but **only perfect-net epochs (residual = 0) reliably reach `Settled` on Sepolia** today — non-zero residual swaps fail for environmental reasons (SwapRouter02 ABI mismatch, no mWETH/mUSDC pool, empty engine inventory). See README “Known Sepolia limitation”. Operator scripts: `ops:open-epoch:sepolia`, `ops:finalize:sepolia`.
+**Verification note (July 30, 2026):** the migrated local suite reports 11
+passing tests. The checked-in Sepolia deployment metadata is legacy pre-Nox
+metadata. No claim is made that either perfect-net or non-zero-residual Noxage
+settlement has succeeded on the fresh migrated contracts. Operator scripts
+exist, but their successful live use remains unverified.
 
 ---
 
@@ -419,12 +437,20 @@ User decrypts own fill (auditor optional)
 
 **Definition of Done**
 
-- [x] User can connect, shield, and submit a sealed intent on Sepolia (`/app/shield`, `/app/intent`)  
+- [ ] User can connect, shield, and submit a sealed intent against freshly deployed migrated contracts on Sepolia  
 - [x] UI never claims privacy it doesn’t deliver (sealed values render as `●●●●`; no mock data anywhere)  
 - [x] Fully keyboard accessible; focus rings present (global `:focus-visible`, `aria-pressed`/`fieldset` semantics)  
 - [x] Wrong network hard-gated by a blocking, focus-trapped dialog (`NetworkGuard`)  
 
 **Configuration:** connect via injected browser wallet only (no WalletConnect relay). Operator scripts for epoch open + settlement finalize live in `packages/contracts` (`ops:open-epoch:sepolia`, `ops:finalize:sepolia`).
+
+**Operations note (July 30, 2026):** the coordinated root command
+`pnpm contracts:deploy:sepolia` creates a new deployment identity and advances
+metadata through `confidential`, `intents`, and `complete` stages. Each later
+phase rejects stale or foreign metadata. `pnpm contracts:preflight:sepolia`
+performs read-only bytecode, owner, wiring, underlying-token, and pair checks.
+The finalize script refuses legacy metadata and requires non-zero slippage
+protection for a non-zero decrypted residual.
 
 ---
 
@@ -446,7 +472,7 @@ User decrypts own fill (auditor optional)
 
 **Definition of Done**
 
-- [x] Full path Shield → Intent → Epoch settle → Decrypt fill works without mocks  
+- [ ] Full path Shield → Intent → Epoch settle → Decrypt fill verified against migrated Sepolia contracts  
 - [x] PrivacySplitView usable in demo video (`/app/epoch`, settled state)  
 - [x] Fills history persists across refresh — rebuilt from `IntentSubmitted` / `FillCredited` logs, not local state  
 - [x] `/app/auditor` ships as ERC-7984 **observer** grant/revoke + observer decrypt view  
@@ -640,9 +666,12 @@ Before go-ahead, confirm:
 # scaffold monorepo, copy design system, init Next + Hardhat + Nox starter
 ```
 
-No code generation or scaffolding has been started. This document is the plan only.
+Implementation has been started and the source migration is present. This
+document retains the original plan for context, but unchecked live-verification
+items remain release gates.
 
 ---
 
 **Noxage** — public liquidity, private strategy.  
-Built on iExec Nox. Designed with the Noviq UI system. Shipped as a product.
+Built on iExec Nox. Local build and tests pass; live migrated Sepolia operation
+is not yet verified.

@@ -2,11 +2,15 @@
 
 import { useCallback, useState } from "react";
 import { decodeEventLog, type Hex } from "viem";
-import { useAccount, usePublicClient, useWriteContract } from "@/lib/wallet";
+import {
+  useAccount,
+  usePublicClient,
+  useWalletClient,
+  useWriteContract,
+} from "@/lib/wallet";
 import { intentBookAbi } from "@/lib/abis";
 import { addresses, MVP_PAIR_ID } from "@/lib/contracts";
 import { encryptIntent } from "@/lib/fhe";
-import { getConnectorProvider } from "@/lib/wallet-provider";
 import { useTxToast } from "./useTxToast";
 
 type IntentStage =
@@ -20,9 +24,9 @@ type IntentStage =
 export interface SubmitIntentInput {
   /** 0 = sell base, 1 = buy base. */
   side: number;
-  /** Size in confidential (6-decimal) base units. */
+  /** Size in the base token's raw units. */
   amount: bigint;
-  /** Optional limit price (6-decimal); 0 = no limit. */
+  /** Optional limit price in quote-token raw units; 0 = no limit. */
   limit: bigint;
   /** Public unix deadline. */
   deadline: bigint;
@@ -37,7 +41,8 @@ export interface SealedIntent {
 }
 
 export function useSubmitIntent() {
-  const { address, connector } = useAccount();
+  const { address } = useAccount();
+  const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
   const toast = useTxToast();
@@ -48,23 +53,21 @@ export function useSubmitIntent() {
 
   const submit = useCallback(
     async (input: SubmitIntentInput): Promise<SealedIntent | null> => {
-      if (!address || !publicClient) return null;
+      if (!address || !publicClient || !walletClient) return null;
       setError(null);
       setSealed(null);
       try {
         // 1. Encrypt (side, amount, limit) client-side, bound to book + user.
         setStage("encrypting");
         toast.info("Sealing intent", "Encrypting size and direction locally.");
-        const provider = await getConnectorProvider(connector);
         const enc = await encryptIntent(
           addresses.intentBook,
-          address,
           {
             side: input.side,
             amount: input.amount,
             limit: input.limit,
           },
-          provider,
+          walletClient,
         );
 
         // 2. Submit the encrypted handles + proof. Pair & deadline are public.
@@ -76,10 +79,12 @@ export function useSubmitIntent() {
           args: [
             MVP_PAIR_ID,
             input.deadline,
-            enc.sideExt,
-            enc.amountExt,
-            enc.limitExt,
-            enc.inputProof,
+            enc.side.handle,
+            enc.side.handleProof,
+            enc.amount.handle,
+            enc.amount.handleProof,
+            enc.limit.handle,
+            enc.limit.handleProof,
           ],
         });
 
@@ -128,7 +133,7 @@ export function useSubmitIntent() {
         return null;
       }
     },
-    [address, connector, publicClient, writeContractAsync, toast],
+    [address, publicClient, walletClient, writeContractAsync, toast],
   );
 
   const reset = useCallback(() => {

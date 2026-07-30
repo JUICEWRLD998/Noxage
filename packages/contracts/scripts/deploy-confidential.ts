@@ -1,4 +1,5 @@
 import { ethers, network } from "hardhat";
+import { randomUUID } from "crypto";
 import { promises as fs } from "fs";
 import * as path from "path";
 
@@ -11,7 +12,7 @@ import * as path from "path";
  *
  * Addresses are written to `deployments/<network>.json` so the frontend and
  * later phases can consume them. On Sepolia these are real, verifiable txs
- * against the live Zama FHEVM coprocessor.
+ * against the live iExec Nox protocol contracts.
  */
 
 type TokenSpec = {
@@ -69,7 +70,9 @@ async function main() {
     console.log(`  ${spec.confidentialKey}: ${confidentialAddr}\n`);
   }
 
-  // Merge into deployments/<network>.json without clobbering existing keys.
+  // A confidential-rail deploy starts a new coordinated deployment. Preserve
+  // only an explicitly configured router from older metadata; all Noxage
+  // contract addresses must come from this deployment sequence.
   const outPath = path.resolve(__dirname, `../../../deployments/${net}.json`);
   let existing: Record<string, unknown> = {};
   try {
@@ -78,18 +81,27 @@ async function main() {
     // First deploy for this network — start fresh.
   }
 
-  const contracts = {
-    ...(typeof existing.contracts === "object" && existing.contracts !== null
+  const existingContracts =
+    typeof existing.contracts === "object" && existing.contracts !== null
       ? (existing.contracts as Record<string, unknown>)
-      : {}),
+      : {};
+  const configuredRouter =
+    typeof existingContracts.UniswapV3SwapRouter === "string"
+      ? existingContracts.UniswapV3SwapRouter
+      : undefined;
+  const contracts = {
     ...deployed,
+    ...(configuredRouter ? { UniswapV3SwapRouter: configuredRouter } : {}),
   };
 
   const chainId = (await ethers.provider.getNetwork()).chainId.toString();
   const merged = {
-    ...existing,
     chainId: Number(chainId),
     network: net,
+    privacyBackend: "iexec-nox",
+    migrationStage: "confidential",
+    deploymentId: randomUUID(),
+    deployedBy: await deployer.getAddress(),
     contracts,
     updatedAt: new Date().toISOString(),
   };

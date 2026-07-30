@@ -14,9 +14,9 @@ import { useTxToast } from "./useTxToast";
 type PrepareStage = "idle" | "preparing" | "done" | "error";
 
 /**
- * Permissionless homomorphic netting step: anyone may call prepareSettlement
- * once an epoch is closed. Reveals only aggregate residual handles for KMS
- * decrypt; finalize still requires the engine owner.
+ * Permissionless confidential netting step: anyone may call prepareSettlement
+ * once an epoch is closed. It reveals only aggregate residual handles for Nox
+ * public decryption; finalize still requires the engine owner.
  */
 export function usePrepareSettlement() {
   const publicClient = usePublicClient();

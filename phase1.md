@@ -171,7 +171,7 @@
   2. Select a token with a confidential balance.
   3. Click Unshield.
   4. Confirm the unwrap transaction.
-  5. Wait for the Zama KMS/oracle finalization.
+  5. Wait for the Nox gateway public-decryption result.
   6. Refresh and confirm the public balance eventually increases.
 
   Unshielding is asynchronous, so the public balance may not update immediately.

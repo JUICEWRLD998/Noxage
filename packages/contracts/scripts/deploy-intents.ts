@@ -50,7 +50,19 @@ async function main() {
   try {
     existing = JSON.parse(await fs.readFile(outPath, "utf8"));
   } catch {
-    // First deploy for this network — start fresh.
+    throw new Error(
+      `No deployments/${net}.json found. Run the confidential deployment first.`,
+    );
+  }
+
+  if (
+    existing.privacyBackend !== "iexec-nox" ||
+    existing.migrationStage !== "confidential" ||
+    typeof existing.deploymentId !== "string"
+  ) {
+    throw new Error(
+      `deployments/${net}.json is not the confidential phase of a coordinated Nox deployment.`,
+    );
   }
 
   const contracts = {
@@ -65,6 +77,9 @@ async function main() {
     ...existing,
     chainId: Number(chainId),
     network: net,
+    privacyBackend: "iexec-nox",
+    migrationStage: "intents",
+    deployedBy: deployerAddr,
     contracts,
     updatedAt: new Date().toISOString(),
   };

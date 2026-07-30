@@ -2,83 +2,86 @@
 pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
-import {euint64} from "@fhevm/solidity/lib/FHE.sol";
-import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
-import {ERC7984} from "@openzeppelin/confidential-contracts/token/ERC7984/ERC7984.sol";
-import {ERC7984ERC20Wrapper} from "@openzeppelin/confidential-contracts/token/ERC7984/extensions/ERC7984ERC20Wrapper.sol";
-import {ERC7984ObserverAccess} from "@openzeppelin/confidential-contracts/token/ERC7984/extensions/ERC7984ObserverAccess.sol";
+import {
+    Nox,
+    euint256
+} from "@iexec-nox/nox-protocol-contracts/contracts/sdk/Nox.sol";
+import {
+    ERC20ToERC7984Wrapper
+} from "@iexec-nox/nox-confidential-contracts/contracts/token/extensions/ERC20ToERC7984Wrapper.sol";
 
 /**
  * @title NoxageConfidentialToken
  * @notice Noxage's confidential-balance wrapper for a single public ERC-20.
  *
- * @dev This is the Phase 2 "shield / unshield" primitive. It composes three
- *      audited OpenZeppelin confidential-contract layers on top of Zama's FHEVM
- *      coprocessor (live on Ethereum Sepolia):
+ * @dev This is the Phase 2 "shield / unshield" primitive implemented with the
+ *      iExec Nox ERC-20 to ERC-7984 wrapper:
  *
- *      - {ERC7984ERC20Wrapper} — wrap (shield) public ERC-20 into an encrypted
- *        `euint64` balance, and unwrap (unshield) back to the public token via a
+ *      - {ERC20ToERC7984Wrapper} - wrap public ERC-20 into an encrypted
+ *        `euint256` balance, and unwrap back to the public token via a
  *        two-step decrypt-and-finalize flow. Balances and transfer amounts are
  *        stored as ciphertext handles on-chain; plaintext never appears.
- *      - {ERC7984ObserverAccess} — selective disclosure. An account may appoint
- *        one observer that is granted permanent FHE ACL access to that account's
- *        balance and transfer amounts (auditor / delegated viewer). The account
- *        (or the observer, to abdicate) can change it at any time.
- *      - {ZamaEthereumConfig} — wires the ACL / Coprocessor / KMSVerifier
- *        addresses automatically by `block.chainid` (mainnet, Sepolia, local).
  *
  *      Deploy one instance per underlying token (e.g. a confidential USDC and a
  *      confidential WETH). The 1:1 confidential fill/netting logic lives in later
  *      phases; this contract only owns the confidential value rail.
  *
  *      Privacy note: {confidentialBalanceOf} returns a ciphertext handle, not a
- *      cleartext balance. Only the owner (and any appointed observer) hold ACL
- *      rights to decrypt it off-chain via the Zama relayer.
+ *      cleartext balance. The balance owner can decrypt it off-chain via the
+ *      Nox handle SDK.
  */
-contract NoxageConfidentialToken is
-    ERC7984,
-    ERC7984ERC20Wrapper,
-    ERC7984ObserverAccess,
-    ZamaEthereumConfig
-{
+contract NoxageConfidentialToken is ERC20ToERC7984Wrapper {
+    mapping(address account => address viewer) private _observers;
+
+    event ObserverSet(address indexed account, address indexed observer);
+
+    error ObserverUnauthorizedAccount(address account, address caller);
+
     constructor(
         IERC20 underlying_,
         string memory name_,
         string memory symbol_,
         string memory tokenURI_
-    ) ERC7984(name_, symbol_, tokenURI_) ERC7984ERC20Wrapper(underlying_) {}
+    ) ERC20ToERC7984Wrapper(name_, symbol_, tokenURI_, underlying_) {}
 
-    // ── Multiple-inheritance disambiguation ──────────────────────────────────
-    // `_update` is overridden by both the wrapper (total-supply guard) and the
-    // observer extension (grants ACL to observers). Chain both via `super`; C3
-    // linearization runs them in reverse declaration order.
+    /**
+     * @notice Select a viewer for balance handles created by future updates.
+     * @dev Nox viewer grants on existing handles are additive and cannot be
+     *      revoked. Setting zero stops granting the viewer access to new handles.
+     */
+    function setObserver(address account, address newObserver) external {
+        if (msg.sender != account) {
+            revert ObserverUnauthorizedAccount(account, msg.sender);
+        }
+        _observers[account] = newObserver;
+        emit ObserverSet(account, newObserver);
+    }
+
+    function observer(address account) external view returns (address) {
+        return _observers[account];
+    }
 
     function _update(
         address from,
         address to,
-        euint64 amount
-    )
-        internal
-        virtual
-        override(ERC7984, ERC7984ERC20Wrapper, ERC7984ObserverAccess)
-        returns (euint64 transferred)
-    {
-        return super._update(from, to, amount);
+        euint256 amount
+    ) internal virtual override returns (euint256 transferred) {
+        transferred = super._update(from, to, amount);
+        if (from != address(0)) {
+            _grantObserver(from);
+        }
+        if (to != address(0) && to != from) {
+            _grantObserver(to);
+        }
     }
 
-    function decimals()
-        public
-        view
-        virtual
-        override(ERC7984, ERC7984ERC20Wrapper)
-        returns (uint8)
-    {
-        return super.decimals();
-    }
+    function _grantObserver(address account) private {
+        euint256 balance = confidentialBalanceOf(account);
+        Nox.addViewer(balance, account);
 
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view virtual override(ERC7984, ERC7984ERC20Wrapper) returns (bool) {
-        return super.supportsInterface(interfaceId);
+        address viewer = _observers[account];
+        if (viewer != address(0)) {
+            Nox.addViewer(balance, viewer);
+        }
     }
 }

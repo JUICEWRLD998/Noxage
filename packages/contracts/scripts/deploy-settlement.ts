@@ -45,6 +45,16 @@ async function main() {
     );
   }
 
+  if (
+    existing.privacyBackend !== "iexec-nox" ||
+    existing.migrationStage !== "intents" ||
+    typeof existing.deploymentId !== "string"
+  ) {
+    throw new Error(
+      `deployments/${net}.json is not the intent phase of a coordinated Nox deployment.`,
+    );
+  }
+
   const contracts =
     typeof existing.contracts === "object" && existing.contracts !== null
       ? (existing.contracts as Record<string, unknown>)
@@ -141,9 +151,12 @@ async function main() {
     ...existing,
     chainId: Number(chainId),
     network: net,
+    privacyBackend: "iexec-nox",
+    migrationStage: "complete",
+    deployedBy: deployerAddr,
     note:
       "Phase 2: confidential balances. Phase 3: intent book + epoch manager. " +
-      "Phase 4: fill ledger + settlement engine (homomorphic netting + residual Uniswap). " +
+      "Phase 4: fill ledger + settlement engine (Nox confidential netting + residual Uniswap). " +
       "Deploy: pnpm --filter @noxage/contracts deploy:settlement:sepolia",
     contracts: mergedContracts,
     updatedAt: new Date().toISOString(),

@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {FHE, euint64} from "@fhevm/solidity/lib/FHE.sol";
-import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
+import {
+    Nox,
+    euint256
+} from "@iexec-nox/nox-protocol-contracts/contracts/sdk/Nox.sol";
 
 /**
  * @title NoxageFillLedger
  * @notice Confidential per-intent fill accounting for a settled epoch.
  *
  * When {NoxageSettlementEngine} finalizes an epoch it credits every active
- * intent a fill, expressed as four encrypted legs (all `euint64`, all in the
+ * intent a fill, expressed as four encrypted legs (all `euint256`, all in the
  * pair's smallest units):
  *
  *   - `recvBase`  — base tokens the user receives (non-zero for buyers)
@@ -18,15 +20,14 @@ import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
  *   - `payQuote`  — quote tokens the user gives up  (non-zero for buyers)
  *
  * Splitting each side into a received and a paid leg keeps every value a
- * non-negative `euint64` (no signed ciphertext needed). The direction stays
+ * non-negative `euint256` (no signed ciphertext needed). The direction stays
  * hidden: a viewer without ACL rights cannot tell which legs are zero.
  *
- * Only the settlement engine may write. Each leg is granted persistent FHE ACL
- * access to the intent owner (selective disclosure), so a user — or an auditor
- * they later authorize — can decrypt their own fill off-chain via the Zama
- * relayer. Plaintext fills never touch the chain.
+ * Only the settlement engine may write. Each leg grants the owner Nox viewer
+ * access for selective off-chain decryption. Plaintext fills never touch the
+ * chain.
  */
-contract NoxageFillLedger is ZamaEthereumConfig {
+contract NoxageFillLedger {
     /// @notice The settlement engine allowed to credit fills. Immutable after set.
     address public engine;
 
@@ -37,10 +38,10 @@ contract NoxageFillLedger is ZamaEthereumConfig {
         uint256 epochId;
         address owner;
         bool set;
-        euint64 recvBase;
-        euint64 recvQuote;
-        euint64 payBase;
-        euint64 payQuote;
+        euint256 recvBase;
+        euint256 recvQuote;
+        euint256 payBase;
+        euint256 payQuote;
     }
 
     /// @notice Fill by intent id (an intent settles into at most one fill).
@@ -88,22 +89,26 @@ contract NoxageFillLedger is ZamaEthereumConfig {
         uint256 epochId,
         uint256 intentId,
         address owner,
-        euint64 recvBase,
-        euint64 recvQuote,
-        euint64 payBase,
-        euint64 payQuote
+        euint256 recvBase,
+        euint256 recvQuote,
+        euint256 payBase,
+        euint256 payQuote
     ) external onlyEngine {
         if (_fills[intentId].set) revert FillAlreadyCredited();
 
-        FHE.allowThis(recvBase);
-        FHE.allowThis(recvQuote);
-        FHE.allowThis(payBase);
-        FHE.allowThis(payQuote);
+        Nox.allowThis(recvBase);
+        Nox.allowThis(recvQuote);
+        Nox.allowThis(payBase);
+        Nox.allowThis(payQuote);
 
-        FHE.allow(recvBase, owner);
-        FHE.allow(recvQuote, owner);
-        FHE.allow(payBase, owner);
-        FHE.allow(payQuote, owner);
+        Nox.allow(recvBase, owner);
+        Nox.allow(recvQuote, owner);
+        Nox.allow(payBase, owner);
+        Nox.allow(payQuote, owner);
+        Nox.addViewer(recvBase, owner);
+        Nox.addViewer(recvQuote, owner);
+        Nox.addViewer(payBase, owner);
+        Nox.addViewer(payQuote, owner);
 
         _fills[intentId] = Fill({
             epochId: epochId,
@@ -130,7 +135,7 @@ contract NoxageFillLedger is ZamaEthereumConfig {
     function fillHandles(uint256 intentId)
         external
         view
-        returns (euint64 recvBase, euint64 recvQuote, euint64 payBase, euint64 payQuote)
+        returns (euint256 recvBase, euint256 recvQuote, euint256 payBase, euint256 payQuote)
     {
         Fill storage f = _fills[intentId];
         return (f.recvBase, f.recvQuote, f.payBase, f.payQuote);

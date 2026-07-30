@@ -84,7 +84,7 @@ export default function Home() {
             </div>
             <div className={styles.heroMetaItem}>
               <dt>Encryption</dt>
-              <dd>Zama FHEVM · ERC-7984</dd>
+              <dd>iExec Nox · ERC-7984</dd>
             </div>
             <div className={styles.heroMetaItem}>
               <dt>Settlement rail</dt>
@@ -163,8 +163,8 @@ export default function Home() {
           </div>
 
           <p className={styles.privacyNote}>
-            Encrypted balances and intents run on Zama’s FHEVM coprocessor
-            (ERC-7984). A lone intent in an epoch can be inferred from the
+            Encrypted balances and intents run through iExec Nox confidential
+            compute (ERC-7984). A lone intent in an epoch can be inferred from the
             residual — batching is the protection, and we say so. Full trust
             assumptions live in the{" "}
             <a

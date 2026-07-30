@@ -9,7 +9,7 @@
 Noxage encrypts trade intents, nets opposing orders inside encrypted state, and sends only the aggregate residual to public liquidity.
 
 [![Network](https://img.shields.io/badge/Network-Ethereum_Sepolia-627EEA)](https://sepolia.etherscan.io/)
-[![Encryption](https://img.shields.io/badge/Encryption-Zama_FHEVM-111111)](https://www.zama.ai/)
+[![Privacy](https://img.shields.io/badge/Privacy-iExec_Nox-5B44F2)](https://docs.iex.ec/nox-protocol/getting-started/welcome)
 [![Status](https://img.shields.io/badge/Status-Hackathon_MVP-orange)](#project-status)
 [![License](https://img.shields.io/badge/License-MIT-green)](#license)
 
@@ -41,14 +41,16 @@ Noxage explores a middle path: **keep individual intent data encrypted, net what
 
 **A trade does not need to be fully public to settle on public DeFi rails.**
 
-Noxage is a privacy-preserving batch intent prototype for Ethereum Sepolia:
+Noxage is an Ethereum Sepolia-targeted batch intent MVP. The checked-in source
+implements the following Nox-based flow, but the complete flow has not yet been
+verified against a freshly deployed Noxage contract set:
 
 1. A user encrypts their trade direction, amount, and optional limit locally.
 2. Encrypted intents are collected into a time-bounded epoch.
-3. The settlement engine homomorphically totals buy and sell flow without revealing individual values.
+3. The settlement engine requests confidential arithmetic over Nox encrypted handles without revealing individual values.
 4. Opposing flow is netted inside encrypted state.
 5. Only the aggregate residual is decrypted and sent to an unmodified Uniswap SwapRouter02-compatible router.
-6. Each user's fill is recorded as encrypted data and can be decrypted only through the FHE access-control layer.
+6. Each user's fill is recorded as an encrypted handle and can be decrypted only by an authorized Nox viewer.
 
 The result is not a "fully invisible swap." The batch, pair, participants, timing, and final residual remain observable. The privacy benefit comes from preventing individual sizes and directions from appearing in plaintext when multiple opposing intents share an epoch.
 
@@ -58,7 +60,7 @@ The result is not a "fully invisible swap." The batch, pair, participants, timin
 
 ### 1. Shield
 
-Users wrap public test tokens into ERC-7984 confidential balances. The resulting balances are represented by encrypted handles rather than plaintext token amounts.
+Users wrap public test tokens into Nox ERC-7984 confidential balances. The resulting balances are represented by encrypted handles rather than plaintext token amounts.
 
 ### 2. Seal an Intent
 
@@ -90,7 +92,7 @@ The individual inputs remain encrypted during this calculation.
 
 ### 5. Settle the Residual
 
-The settlement owner submits the KMS-signed public-decryption proof to `finalizeSettlement`.
+The settlement owner obtains the aggregate residual and decryption proof through the Nox Handle SDK, then submits that proof to `finalizeSettlement`.
 
 - A zero residual settles without calling the router.
 - A non-zero residual is sent to the configured SwapRouter02-compatible router.
@@ -98,7 +100,7 @@ The settlement owner submits the KMS-signed public-decryption proof to `finalize
 
 ### 6. Decrypt the Fill
 
-Successful settlement writes encrypted fill legs to `NoxageFillLedger`. Users explicitly sign a decrypt request to view their own fills. Decrypted values are held in browser memory and are not persisted by the app.
+Successful settlement writes encrypted fill legs to `NoxageFillLedger`. Users explicitly sign a Nox Handle SDK decrypt request to view their own fills. Decrypted values are held in browser memory and are not persisted by the app.
 
 ---
 
@@ -122,7 +124,8 @@ If an epoch contains only one active intent, the public residual can reveal that
 
 The MVP also stores encrypted limits but does **not** enforce them during settlement. The clearing price is supplied by the settlement owner and is not independently verified by an oracle.
 
-See [docs/THREAT-MODEL.md](./docs/THREAT-MODEL.md) for the complete trust assumptions and leakage analysis.
+The privacy boundary above is the current checked-in summary. A separate
+`docs/THREAT-MODEL.md` has not yet been added to this repository.
 
 ---
 
@@ -158,7 +161,7 @@ See [docs/THREAT-MODEL.md](./docs/THREAT-MODEL.md) for the complete trust assump
               v
   +------------------------+
   | NoxageFillLedger       |
-  | owner-gated FHE ACL    |
+  | owner-gated Nox ACL    |
   +-----------+------------+
               |
               | explicit signed decrypt request
@@ -170,7 +173,7 @@ See [docs/THREAT-MODEL.md](./docs/THREAT-MODEL.md) for the complete trust assump
 
 | Component | Responsibility |
 | --- | --- |
-| `NoxageConfidentialToken` | ERC-7984 wrapper for shielding and unshielding public ERC-20 balances |
+| `NoxageConfidentialToken` | Nox ERC-7984 wrapper for shielding and unshielding public ERC-20 balances |
 | `NoxageEpochManager` | Enforces the `None -> Open -> Closed -> Settled or Failed` epoch lifecycle |
 | `NoxageIntentBook` | Validates the configured pair and stores encrypted intent handles |
 | `NoxageSettlementEngine` | Nets encrypted flow, verifies the residual proof, executes the public residual, and credits fills |
@@ -179,23 +182,39 @@ See [docs/THREAT-MODEL.md](./docs/THREAT-MODEL.md) for the complete trust assump
 
 ### iExec Nox Integration Status
 
-The current Sepolia MVP is designed for the iExec Nox use case, but the Nox
-runner is **not yet connected to the live settlement path**.
+Noxage's source has been migrated from its original fhEVM implementation to the
+iExec Nox protocol. The checked-in code uses:
 
-- The browser encrypts and decrypts values through the Zama FHEVM relayer SDK.
-- The contracts use FHEVM encrypted types and access control to store intents,
-  net buy and sell flow, and protect balances and fills.
-- `prepareSettlement` performs the encrypted netting on-chain.
-- The Zama KMS reveals only the aggregate residual, which is verified by
-  `finalizeSettlement` before any public swap.
-- `NOX_GATEWAY_URL` and `NOX_RUNNER_URL` are reserved configuration values, but
-  no application or contract code currently calls them.
+- `@iexec-nox/nox-protocol-contracts` and its `Nox` Solidity SDK for encrypted
+  handles, confidential arithmetic, ACLs, and public-decryption proof checks;
+- `@iexec-nox/nox-confidential-contracts` for the ERC-7984 confidential token
+  layer;
+- `@iexec-nox/handle` in the web application for input encryption, authorized
+  decryption, public decryption, and ACL inspection;
+- the NoxCompute proxy configured for the active chain.
 
-The remaining Nox integration is to send each closed epoch to an attested Nox
-runner, return a verifiable settlement result, and require that result during
-finalization. Until that work is complete, the project should be described as a
-Zama FHEVM implementation prepared for Nox integration, not as a completed Nox
-runtime deployment.
+For Ethereum Sepolia (`chainId 11155111`), the installed Nox packages resolve
+NoxCompute to `0x24Ef36Ec5b626D7DCD09a98F3083c2758F0F77bF`. The current web
+client calls `createViemHandleClient(walletClient)` and relies on the Handle
+SDK's built-in Ethereum Sepolia gateway, NoxCompute, and subgraph configuration.
+It does not read environment variables for custom Nox endpoint overrides.
+
+Source migration does not make the checked-in deployment current. A coordinated
+fresh Ethereum Sepolia deployment and new deployment metadata are still
+required.
+
+**Local verification on July 30, 2026:** the migration work has been checked
+with contract compilation, the local contract suite, TypeScript static checks,
+frontend linting, and a production web build. Exact results from the latest run
+are recorded below after the commands are rerun. These checks do not prove live
+Nox confidential execution.
+
+A small standalone Nox contract was previously compiled and deployed on
+Ethereum Sepolia during integration exploration. That deployment does not prove
+the migrated Noxage intent-to-settlement flow. Real Handle SDK encryption,
+intent submission, confidential netting, public decryption, router execution,
+fill decryption, authorization rejection, and a fresh complete Noxage Sepolia
+deployment remain to be verified.
 
 ---
 
@@ -204,7 +223,7 @@ runtime deployment.
 ### Confidential Intent Flow
 
 - Local encryption of trade direction, amount, and optional limit
-- FHE-compatible ciphertext storage and validation
+- Nox handle storage and input-proof validation
 - No plaintext intent amount or direction in contract events
 - Explicit user signatures for confidential-value decryption
 
@@ -213,7 +232,7 @@ runtime deployment.
 - Time-bounded epochs
 - Permissionless epoch close after expiry
 - Permissionless settlement preparation
-- Homomorphic buy and sell aggregation
+- Confidential buy and sell aggregation through NoxCompute
 - Zero-residual settlement without a public router call
 - Public execution limited to the aggregate residual
 
@@ -234,8 +253,9 @@ runtime deployment.
 | Layer | Technology |
 | --- | --- |
 | Network | Ethereum Sepolia |
-| Confidential compute | Zama FHEVM and relayer SDK |
-| Confidential token standard | OpenZeppelin ERC-7984 contracts |
+| Confidential compute | iExec Nox protocol and NoxCompute |
+| Confidential client | `@iexec-nox/handle` with viem |
+| Confidential token standard | `@iexec-nox/nox-confidential-contracts` ERC-7984 |
 | Smart contracts | Solidity, Hardhat, ethers |
 | Public settlement | Uniswap SwapRouter02-compatible `exactInputSingle` |
 | Frontend | Next.js 16, React 19, TypeScript |
@@ -254,8 +274,8 @@ noxage/
 |       |-- contracts/             # Solidity contracts
 |       |-- scripts/               # Deployment and operator scripts
 |       `-- test/                  # Contract and security regression tests
-|-- deployments/                   # Checked-in public network addresses
-|-- docs/                          # Architecture, threat model, audit, and demo docs
+|-- deployments/                   # Legacy addresses plus standalone Nox probe metadata
+|-- demo.md                        # Demo runbook; requires revalidation after migration
 |-- implementation.md              # Phased implementation record
 `-- feedback.md                    # iExec / Nox tooling feedback
 ```
@@ -285,7 +305,7 @@ noxage/
 - pnpm 10
 - A browser wallet such as MetaMask
 - Sepolia ETH for testnet transactions
-- A Zama FHEVM-compatible relayer configuration
+- Access to the Nox Ethereum Sepolia gateway, NoxCompute contract, and subgraph
 
 ### 1. Install
 
@@ -311,20 +331,30 @@ cp .env.example .env
 cp .env.example apps/web/.env.local
 ```
 
-The template documents every available variable. At minimum, verify the Sepolia RPC, logs RPC, chain ID, FHEVM relayer, and deployed contract addresses.
+The template documents the variables read by the current Hardhat configuration,
+web client, and settlement finalization script. At minimum, set the Sepolia RPC
+and all freshly deployed Noxage contract addresses. The web client is hard-gated
+to Ethereum Sepolia and currently uses the Handle SDK's built-in Sepolia
+configuration.
 
 ```dotenv
 SEPOLIA_RPC_URL=https://your-sepolia-rpc.example
 DEPLOYER_PRIVATE_KEY=0xYOUR_DISPOSABLE_SEPOLIA_KEY
 
-NEXT_PUBLIC_CHAIN_ID=11155111
 NEXT_PUBLIC_SEPOLIA_RPC_URL=https://your-sepolia-rpc.example
 NEXT_PUBLIC_SEPOLIA_LOGS_RPC_URL=https://your-archive-capable-sepolia-rpc.example
-NEXT_PUBLIC_FHEVM_RELAYER_URL=https://relayer.testnet.zama.cloud
-NEXT_PUBLIC_FHEVM_NETWORK=sepolia
+NEXT_PUBLIC_NOXAGE_INTENT_BOOK_ADDRESS=0x...
+NEXT_PUBLIC_NOXAGE_EPOCH_MANAGER_ADDRESS=0x...
+NEXT_PUBLIC_NOXAGE_SETTLEMENT_EXECUTOR_ADDRESS=0x...
+NEXT_PUBLIC_NOXAGE_FILL_LEDGER_ADDRESS=0x...
+NEXT_PUBLIC_NOXAGE_CONFIDENTIAL_USDC_ADDRESS=0x...
+NEXT_PUBLIC_NOXAGE_CONFIDENTIAL_WETH_ADDRESS=0x...
+NEXT_PUBLIC_MOCK_USDC_ADDRESS=0x...
+NEXT_PUBLIC_MOCK_WETH_ADDRESS=0x...
 ```
 
-Never commit `.env`, `.env.local`, private keys, RPC credentials, or relayer credentials. The deployment JSON files contain public addresses only.
+Never commit `.env`, `.env.local`, private keys, or RPC credentials. The
+deployment JSON files contain public addresses only.
 
 ### 3. Run the Application
 
@@ -343,13 +373,20 @@ pnpm run lint
 pnpm run build
 ```
 
-Contract tests use the FHEVM mock environment and `MockSwapRouter`. Passing local tests does not prove that a live Sepolia pool exists or has sufficient liquidity.
+The current local Nox-oriented suite contains 11 tests. It checks contract
+metadata, observer and owner access controls, wiring, public epoch transitions,
+proof-bearing ABI shapes, and selected failure guards. It does not execute a
+complete Nox confidential operation lifecycle or a live router settlement.
+Passing it does not prove that a Sepolia pool exists or has sufficient
+liquidity.
 
 ---
 
 ## Deployed Contracts
 
-The repository includes deployment metadata for Ethereum Sepolia (`chainId 11155111`).
+The repository includes legacy deployment metadata for Ethereum Sepolia
+(`chainId 11155111`). These addresses belong to the pre-Nox settlement
+deployment and must not be used as proof of a migrated Nox integration.
 
 | Contract | Address |
 | --- | --- |
@@ -363,22 +400,35 @@ The repository includes deployment metadata for Ethereum Sepolia (`chainId 11155
 | `NoxageFillLedger` | [`0x2b2241C094c19D227418f1fA2a98C42Bd08A2113`](https://sepolia.etherscan.io/address/0x2b2241C094c19D227418f1fA2a98C42Bd08A2113) |
 | `UniswapV3SwapRouter` | [`0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E`](https://sepolia.etherscan.io/address/0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E) |
 
-Source of truth: [deployments/sepolia.json](./deployments/sepolia.json)
+Legacy metadata: [deployments/sepolia.json](./deployments/sepolia.json). Replace
+it only after the migrated contracts have been freshly deployed and verified.
 
 ---
 
 ## Fresh Sepolia Deployment
 
-The intent book and settlement engine are bound to `keccak256("mWETH/mUSDC")`. Their wiring functions are write-once, so contract changes require a coordinated fresh deployment.
+The intent book and settlement engine are bound to
+`keccak256("mWETH/mUSDC")`. Their wiring functions are write-once, and the Nox
+migration changes privacy-dependent bytecode and constructor wiring, so a
+coordinated fresh deployment is mandatory.
 
 ```bash
-pnpm --filter @noxage/contracts deploy:sepolia
-pnpm --filter @noxage/contracts deploy:intents:sepolia
-pnpm --filter @noxage/contracts deploy:settlement:sepolia
+pnpm contracts:deploy:sepolia
+pnpm contracts:preflight:sepolia
 ```
+
+The coordinated deploy command runs the confidential, intent, and settlement
+phases in order. The first phase creates a new `deploymentId`; later phases
+refuse metadata from a different backend or phase. Preflight requires a
+`complete` iExec Nox deployment and checks bytecode, write-once wiring, owners,
+token underlyings, and the supported pair. It still cannot prove gateway
+encryption, confidential execution, proof delivery, or router liquidity.
 
 Before opening an epoch, confirm that:
 
+- the contracts resolve the expected Ethereum Sepolia NoxCompute proxy;
+- the web Handle client resolves the same gateway, NoxCompute address, and
+  subgraph;
 - the deployment JSON references the new engine, book, ledger, and epoch manager;
 - the settlement engine is wired into the intent book and epoch manager;
 - the engine has enough public base and quote inventory;
@@ -389,11 +439,15 @@ Before opening an epoch, confirm that:
 ### Operator Commands
 
 ```bash
-EPOCH_ID=1 pnpm --filter @noxage/contracts ops:open-epoch:sepolia
-EPOCH_ID=1 pnpm --filter @noxage/contracts ops:finalize:sepolia
+pnpm contracts:open-epoch:sepolia
+EPOCH_ID=1 pnpm contracts:finalize:sepolia
 ```
 
-`prepareSettlement` is permissionless and available from the epoch screen. Finalization requires the settlement engine owner. Set `AMOUNT_OUT_MINIMUM` for live residual execution; zero slippage protection is not appropriate for real funds.
+`prepareSettlement` is permissionless and available from the epoch screen.
+Finalization requires the settlement engine owner. The finalize script decrypts
+the aggregate residual and direction, validates the configured price ratio, and
+requires a deliberate non-zero `AMOUNT_OUT_MINIMUM` when the residual is
+non-zero. It refuses legacy or partially migrated deployment metadata.
 
 ---
 
@@ -403,6 +457,13 @@ Noxage is a **hackathon MVP**, not an audited production protocol. Use testnet a
 
 ### Current Limitations
 
+- The source migration to Nox primitives and the Handle SDK is implemented, but
+  the complete production path has not passed live end-to-end verification.
+- The web Handle client uses the SDK's built-in Ethereum Sepolia configuration;
+  custom gateway, NoxCompute, and subgraph overrides are not wired.
+- Intent direction is represented as encrypted `bool`; amounts, limits,
+  confidential balances, and fill legs use encrypted `uint256`.
+- The legacy Sepolia addresses above are not Noxage's migrated deployment.
 - The checked-in Sepolia settlement deployment predates the SwapRouter02 interface correction in the source.
 - A fresh coordinated deployment is required before testing non-zero residual settlement with the current code.
 - Non-zero residual execution also requires a funded settlement engine and a liquid `mWETH/mUSDC` Sepolia pool.
@@ -410,9 +471,13 @@ Noxage is a **hackathon MVP**, not an audited production protocol. Use testnet a
 - The owner supplies the clearing price and controls finalization.
 - Failed epochs do not currently have an on-chain retry or refund workflow.
 - Single-intent epochs can reveal the full intent through the public residual.
-- FHEVM, the relayer, KMS, RPC provider, wallet, and operator key remain trusted dependencies.
-- The iExec Nox gateway, attested runner, and result-verification path are not
-  yet wired into the deployed settlement flow.
+- Nox gateway, Nox off-chain services, RPC provider, wallet, and operator key
+  remain trusted or operational dependencies within the documented threat
+  model.
+- Nox public-decryption proof verification and the residual router path still
+  require live Ethereum Sepolia validation.
+- `docs/THREAT-MODEL.md` and the other documentation files referenced by the
+  original implementation plan are not checked in.
 
 
 ---

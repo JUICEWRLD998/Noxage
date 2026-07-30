@@ -22,7 +22,7 @@ import { EpochStatus, IntentStatus, intentBookAbi } from "@/lib/abis";
 import { TOKENS, addresses } from "@/lib/contracts";
 import styles from "./fills.module.css";
 
-// Fill legs are euint64 confidential units (ERC7984 wrapper caps at 6 decimals),
+// Fill legs are euint256 confidential units,
 // not the underlying ERC-20 decimals.
 const BASE = TOKENS.WETH;
 const QUOTE = TOKENS.USDC;

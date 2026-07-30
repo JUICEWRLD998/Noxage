@@ -1,6 +1,5 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
-import "@fhevm/hardhat-plugin";
 import * as dotenv from "dotenv";
 
 dotenv.config({ path: "../../.env" });
@@ -16,9 +15,9 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 200,
       },
-      // FHEVM contracts blow the stack without IR (many euint locals + ACL grants).
+      // Nox confidential contracts create enough intermediate encrypted handles
+      // that compiling through IR avoids stack-depth issues.
       viaIR: true,
-      // FHEVM requires the cancun EVM (TLOAD/TSTORE used by the coprocessor libs).
       evmVersion: "cancun",
     },
   },

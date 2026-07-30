@@ -19,7 +19,6 @@ import { confidentialTokenAbi } from "@/lib/abis";
 import { TOKENS, TOKEN_LIST, type TokenKey } from "@/lib/contracts";
 import { decryptHandle, isZeroHandle } from "@/lib/fhe";
 import { formatAmount, truncateHex } from "@/lib/format";
-import { getConnectorProvider } from "@/lib/wallet-provider";
 import styles from "./auditor.module.css";
 
 /** Per-token observer grant/revoke card. */
@@ -174,7 +173,7 @@ type ViewState =
   | { status: "error"; message: string };
 
 export default function AuditorPage() {
-  const { address, isConnected, connector } = useAccount();
+  const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
 
@@ -222,14 +221,7 @@ export default function AuditorPage() {
     }
 
     try {
-      const provider = await getConnectorProvider(connector);
-      const value = await decryptHandle(
-        handle,
-        token.confidential,
-        address,
-        walletClient,
-        provider,
-      );
+      const value = await decryptHandle(handle, walletClient);
       setViewState({ status: "decrypted", tokenKey, target, value });
     } catch {
       setViewState({

@@ -6,7 +6,6 @@ import { useAccount, useReadContract, useWalletClient } from "@/lib/wallet";
 import { confidentialTokenAbi, mockErc20Abi } from "@/lib/abis";
 import { TOKENS, type TokenKey } from "@/lib/contracts";
 import { decryptHandle, isZeroHandle } from "@/lib/fhe";
-import { getConnectorProvider } from "@/lib/wallet-provider";
 
 /** Public ERC-20 balance of the connected account for a token. */
 export function usePublicBalance(tokenKey: TokenKey) {
@@ -36,7 +35,7 @@ export function usePublicBalance(tokenKey: TokenKey) {
  * decrypts (which prompts a wallet signature).
  */
 export function useConfidentialBalance(tokenKey: TokenKey) {
-  const { address, connector } = useAccount();
+  const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
   const token = TOKENS[tokenKey];
 
@@ -60,14 +59,7 @@ export function useConfidentialBalance(tokenKey: TokenKey) {
     setDecrypting(true);
     setDecryptError(null);
     try {
-      const provider = await getConnectorProvider(connector);
-      const value = await decryptHandle(
-        handle,
-        token.confidential,
-        address,
-        walletClient,
-        provider,
-      );
+      const value = await decryptHandle(handle, walletClient);
       setClear(value);
     } catch (err) {
       setDecryptError(
@@ -76,7 +68,7 @@ export function useConfidentialBalance(tokenKey: TokenKey) {
     } finally {
       setDecrypting(false);
     }
-  }, [address, connector, walletClient, handle, token.confidential]);
+  }, [address, walletClient, handle]);
 
   // Reset the revealed cleartext when the underlying handle changes.
   const reset = useCallback(() => {
@@ -87,7 +79,7 @@ export function useConfidentialBalance(tokenKey: TokenKey) {
   return {
     handle,
     hasBalance,
-    /** Confidential balances are stored in 6-decimal units (wrapper maxDecimals). */
+    /** Confidential balances preserve the underlying token's native decimals. */
     decimals: token.confidentialDecimals,
     clear,
     decrypt,

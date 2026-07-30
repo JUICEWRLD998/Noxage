@@ -10,6 +10,11 @@
     "lint": "pnpm --filter @noxage/web lint",
     "contracts:compile": "pnpm --filter @noxage/contracts compile",
     "contracts:test": "pnpm --filter @noxage/contracts test",
+    "contracts:check": "pnpm --filter @noxage/contracts check",
+    "contracts:deploy:sepolia": "pnpm --filter @noxage/contracts deploy:sepolia && pnpm --filter @noxage/contracts deploy:intents:sepolia && pnpm --filter @noxage/contracts deploy:settlement:sepolia",
+    "contracts:preflight:sepolia": "pnpm --filter @noxage/contracts preflight:sepolia",
+    "contracts:open-epoch:sepolia": "pnpm --filter @noxage/contracts ops:open-epoch:sepolia",
+    "contracts:finalize:sepolia": "pnpm --filter @noxage/contracts ops:finalize:sepolia",
     "contracts:node": "pnpm --filter @noxage/contracts node"
   },
   "engines": {

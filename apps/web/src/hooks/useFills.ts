@@ -11,7 +11,6 @@ import {
   getHistoricalLogRanges,
   historicalLogsClient,
 } from "@/lib/logs";
-import { getConnectorProvider } from "@/lib/wallet-provider";
 import { useTxToast } from "./useTxToast";
 
 const fillCreditedEvent = getAbiItem({
@@ -29,7 +28,7 @@ export interface FillLeg {
 export interface OwnedFill {
   intentId: bigint;
   epochId: bigint;
-  /** Encrypted euint64 leg handles; decrypt via decryptFill (ACL: intent owner). */
+  /** Encrypted euint256 leg handles; decrypt via decryptFill (ACL: intent owner). */
   handles: {
     recvBase: Hex;
     recvQuote: Hex;
@@ -49,7 +48,7 @@ type DecryptStage = "idle" | "decrypting" | "done" | "error";
  * re-asks for a signature it already has.
  */
 export function useFills() {
-  const { address, connector } = useAccount();
+  const { address } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
   const toast = useTxToast();
@@ -127,17 +126,14 @@ export function useFills() {
       try {
         toast.info("Decrypting fill", "Sign once to reveal your fill legs.");
         const { handles } = fill;
-        const provider = await getConnectorProvider(connector);
         const results = await decryptHandles(
           [
-            { handle: handles.recvBase, contractAddress: addresses.fillLedger },
-            { handle: handles.recvQuote, contractAddress: addresses.fillLedger },
-            { handle: handles.payBase, contractAddress: addresses.fillLedger },
-            { handle: handles.payQuote, contractAddress: addresses.fillLedger },
+            { handle: handles.recvBase },
+            { handle: handles.recvQuote },
+            { handle: handles.payBase },
+            { handle: handles.payQuote },
           ],
-          address,
           walletClient,
-          provider,
         );
         const legs: FillLeg = {
           recvBase: results[handles.recvBase],
@@ -158,7 +154,7 @@ export function useFills() {
         return null;
       }
     },
-    [address, connector, walletClient, fills, decrypted, toast],
+    [address, walletClient, fills, decrypted, toast],
   );
 
   return {

@@ -1,23 +1,34 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import type { Hex } from "viem";
-import { useAccount, usePublicClient, useWriteContract } from "@/lib/wallet";
+import { decodeEventLog, type Hex } from "viem";
+import {
+  useAccount,
+  usePublicClient,
+  useWalletClient,
+  useWriteContract,
+} from "@/lib/wallet";
 import { confidentialTokenAbi } from "@/lib/abis";
 import { TOKENS, type TokenKey } from "@/lib/contracts";
-import { isZeroHandle } from "@/lib/fhe";
+import { isZeroHandle, publicDecryptHandles } from "@/lib/fhe";
 import { useTxToast } from "./useTxToast";
 
-type UnshieldStage = "idle" | "submitting" | "pending-decrypt" | "error";
+type UnshieldStage =
+  | "idle"
+  | "submitting"
+  | "pending-decrypt"
+  | "finalizing"
+  | "done"
+  | "error";
 
 /**
  * Unshield: submit an unwrap of the entire confidential balance handle. This
- * only *requests* the unwrap — the Zama KMS decrypts off-chain and an oracle
- * calls finalizeUnwrap, at which point the public ERC-20 arrives. So we confirm
- * the request tx, then tell the user the underlying settles asynchronously.
+ * only *requests* the unwrap. The Nox gateway returns a public-decryption proof
+ * that can finalize the request and release the public ERC-20.
  */
 export function useUnshield(tokenKey: TokenKey) {
   const { address } = useAccount();
+  const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
   const toast = useTxToast();
@@ -30,7 +41,7 @@ export function useUnshield(tokenKey: TokenKey) {
 
   const unshield = useCallback(
     async (balanceHandle: Hex | undefined): Promise<boolean> => {
-      if (!address || !publicClient) return false;
+      if (!address || !publicClient || !walletClient) return false;
       if (isZeroHandle(balanceHandle) || !balanceHandle) {
         setError("No confidential balance to unshield.");
         setStage("error");
@@ -48,13 +59,57 @@ export function useUnshield(tokenKey: TokenKey) {
           args: [address, address, balanceHandle],
         });
         setLastTx(tx);
-        await publicClient.waitForTransactionReceipt({ hash: tx });
+        const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
 
         setStage("pending-decrypt");
-        toast.success(
-          "Unwrap submitted",
-          "Decryption runs off-chain; your public balance updates once the KMS finalizes.",
+        let requestHandle: Hex | undefined;
+        for (const log of receipt.logs) {
+          if (log.address.toLowerCase() !== token.confidential.toLowerCase()) {
+            continue;
+          }
+          try {
+            const parsed = decodeEventLog({
+              abi: confidentialTokenAbi,
+              data: log.data,
+              topics: log.topics,
+            });
+            if (parsed.eventName === "UnwrapRequested") {
+              requestHandle = parsed.args.amount as Hex;
+              break;
+            }
+          } catch {
+            // Ignore events emitted by the underlying token or Nox protocol.
+          }
+        }
+        if (!requestHandle) {
+          throw new Error("Unwrap request handle was not emitted");
+        }
+
+        toast.info(
+          "Decrypting unwrap",
+          "Requesting a Nox public-decryption proof.",
         );
+
+        const { clearValues, decryptionProofs } = await publicDecryptHandles(
+          [requestHandle],
+          walletClient,
+        );
+        if (typeof clearValues[requestHandle] !== "bigint") {
+          throw new Error("Nox returned an unexpected unwrap amount type");
+        }
+
+        setStage("finalizing");
+        const finalizeTx = await writeContractAsync({
+          address: token.confidential,
+          abi: confidentialTokenAbi,
+          functionName: "finalizeUnwrap",
+          args: [requestHandle, decryptionProofs[requestHandle]],
+        });
+        setLastTx(finalizeTx);
+        await publicClient.waitForTransactionReceipt({ hash: finalizeTx });
+
+        setStage("done");
+        toast.success("Unshielded", "Your public token balance has been released.");
         return true;
       } catch (err) {
         const message =
@@ -65,7 +120,7 @@ export function useUnshield(tokenKey: TokenKey) {
         return false;
       }
     },
-    [address, publicClient, writeContractAsync, token, toast],
+    [address, publicClient, walletClient, writeContractAsync, token, toast],
   );
 
   const reset = useCallback(() => {
@@ -77,7 +132,10 @@ export function useUnshield(tokenKey: TokenKey) {
   return {
     unshield,
     stage,
-    isPending: stage === "submitting",
+    isPending:
+      stage === "submitting" ||
+      stage === "pending-decrypt" ||
+      stage === "finalizing",
     error,
     lastTx,
     reset,

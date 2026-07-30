@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     "encrypted intents",
     "MEV protection",
     "ERC-7984",
-    "FHEVM",
+    "iExec Nox",
     "Uniswap",
     "Sepolia",
   ],

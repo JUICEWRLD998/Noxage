@@ -267,8 +267,8 @@ export default function ShieldPage() {
 
           {unshield.stage === "pending-decrypt" && (
             <p className={styles.note}>
-              Unwrap submitted. Decryption runs off-chain via the Zama KMS; your
-              public balance updates once it finalizes.
+              Unwrap submitted. The Nox public-decryption proof can now finalize
+              the request and release your public balance.
               {unshield.lastTx && (
                 <>
                   {" "}
@@ -282,7 +282,7 @@ export default function ShieldPage() {
       </div>
 
       <p className={styles.privacyNote}>
-        Confidential balances are stored as encrypted <code>euint64</code>{" "}
+        Confidential balances are stored as encrypted <code>euint256</code>{" "}
         handles. Decryption never happens silently — it requires your wallet
         signature. Confidential units use 6 decimals (the wrapper cap).
       </p>

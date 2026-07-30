@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {FHE, ebool, euint8, euint64} from "@fhevm/solidity/lib/FHE.sol";
-import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
+import {
+    Nox,
+    ebool,
+    euint256
+} from "@iexec-nox/nox-protocol-contracts/contracts/sdk/Nox.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -18,29 +21,29 @@ import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
  *
  * For one closed epoch of a single pair (BASE/QUOTE), the engine:
  *
- *   1. {prepareSettlement} — nets every active intent **homomorphically**. Using
+ *   1. {prepareSettlement} - nets every active intent confidentially. Using
  *      the encrypted `side`, it splits each encrypted `amount` into a buy leg and
- *      a sell leg (`FHE.select`) and accumulates encrypted buy/sell totals. It
+ *      a sell leg (`Nox.select`) and accumulates encrypted buy/sell totals. It
  *      then computes the encrypted residual `|buy − sell|` and a direction bit,
  *      and makes **only those two aggregates** publicly decryptable. Individual
  *      sizes and directions are never revealed — only the batch residual, which
  *      is public by design (it is the flow that hits Uniswap).
  *
- *   2. Off-chain, anyone calls the Zama relayer `publicDecrypt` on the two
- *      revealed handles (mirrors the shield/unshield finalize flow).
+ *   2. Off-chain, anyone calls the Nox handle SDK `publicDecrypt` on each
+ *      revealed handle.
  *
- *   3. {finalizeSettlement} — verifies the KMS-signed cleartext residual
- *      (`FHE.checkSignatures`), swaps **the residual only** on the unmodified
+ *   3. {finalizeSettlement} — verifies the Nox public-decryption proofs
+ *      (`Nox.publicDecrypt`), swaps **the residual only** on the unmodified
  *      Uniswap v3 router from the engine's own inventory, then credits every
  *      active intent an encrypted fill at the public clearing price into
  *      {NoxageFillLedger}, and marks the epoch `Settled`. A reverting residual
  *      swap routes the epoch to `Failed` with no fills credited.
  *
- * Trust / privacy: the engine is granted FHE ACL access to intent handles by the
+ * Trust / privacy: the engine is granted Nox ACL access to intent handles by the
  * intent book, so it can net the batch. It learns only the aggregate residual —
  * never any individual amount. See docs/THREAT-MODEL.md.
  */
-contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable, ReentrancyGuard {
+contract NoxageSettlementEngine is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     NoxageEpochManager public immutable epochManager;
@@ -66,8 +69,8 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable, ReentrancyGuard 
     struct Settlement {
         SettlementStatus status;
         // Handles revealed in prepare, verified in finalize (never plaintext).
-        euint64 residualHandle; // |buy − sell| in base units
-        euint64 dirHandle; // 1 == buy-heavy (net buy base), 0 == sell-heavy
+        euint256 residualHandle; // |buy - sell| in base units
+        ebool dirHandle; // true == buy-heavy (net buy base)
     }
 
     mapping(uint256 => Settlement) private _settlements;
@@ -128,14 +131,14 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable, ReentrancyGuard 
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Step 1 — homomorphic netting + residual reveal
+    // Step 1 — confidential netting + residual reveal
     // ─────────────────────────────────────────────────────────────
 
     /**
      * @notice Net a closed epoch's intents and reveal only the aggregate
      *         residual + direction for off-chain decryption.
      * @dev Callable by anyone once the epoch is closed — the reveal exposes no
-     *      individual data, and the finalize step is KMS-gated. Idempotent guard
+     *      individual data, and finalization is proof-gated. Idempotent guard
      *      via {SettlementStatus}.
      */
     function prepareSettlement(uint256 epochId) external {
@@ -148,9 +151,9 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable, ReentrancyGuard 
         uint256[] memory ids = intentBook.epochIntentIds(epochId);
         uint64 closedAt = epochManager.getEpoch(epochId).closedAt;
 
-        euint64 buyTotal = FHE.asEuint64(0);
-        euint64 sellTotal = FHE.asEuint64(0);
-        euint64 zero = FHE.asEuint64(0);
+        euint256 buyTotal = Nox.toEuint256(0);
+        euint256 sellTotal = Nox.toEuint256(0);
+        euint256 zero = Nox.toEuint256(0);
 
         for (uint256 i = 0; i < ids.length; i++) {
             NoxageIntentBook.Intent memory intent = intentBook.getIntent(ids[i]);
@@ -158,33 +161,28 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable, ReentrancyGuard 
             if (intent.pair != supportedPair) revert UnsupportedPair(intent.pair);
             if (intent.deadline < closedAt) continue;
 
-            // side == 1 → buy base; side == 0 → sell base.
-            ebool isBuy = FHE.eq(intent.side, uint8(1));
-            buyTotal = FHE.add(buyTotal, FHE.select(isBuy, intent.amount, zero));
-            sellTotal = FHE.add(sellTotal, FHE.select(isBuy, zero, intent.amount));
+            buyTotal = Nox.add(buyTotal, Nox.select(intent.side, intent.amount, zero));
+            sellTotal = Nox.add(sellTotal, Nox.select(intent.side, zero, intent.amount));
         }
         // Residual = |buy − sell|; both subtraction branches are computed but the
         // select discards the underflowing one. dir = 1 when buyers dominate.
-        ebool buyHeavy = FHE.gt(buyTotal, sellTotal);
-        euint64 residual = FHE.select(
+        ebool buyHeavy = Nox.gt(buyTotal, sellTotal);
+        euint256 residual = Nox.select(
             buyHeavy,
-            FHE.sub(buyTotal, sellTotal),
-            FHE.sub(sellTotal, buyTotal)
+            Nox.sub(buyTotal, sellTotal),
+            Nox.sub(sellTotal, buyTotal)
         );
-        euint64 dir = FHE.select(buyHeavy, FHE.asEuint64(1), zero);
 
-        // Reveal ONLY these two aggregates. Persist their public-decryptability
-        // and this contract's access so finalize can verify them next tx.
-        FHE.makePubliclyDecryptable(residual);
-        FHE.makePubliclyDecryptable(dir);
-        FHE.allowThis(residual);
-        FHE.allowThis(dir);
+        Nox.allowThis(residual);
+        Nox.allowThis(buyHeavy);
+        Nox.allowPublicDecryption(residual);
+        Nox.allowPublicDecryption(buyHeavy);
 
         s.status = SettlementStatus.Prepared;
         s.residualHandle = residual;
-        s.dirHandle = dir;
+        s.dirHandle = buyHeavy;
 
-        emit SettlementPrepared(epochId, FHE.toBytes32(residual), FHE.toBytes32(dir));
+        emit SettlementPrepared(epochId, euint256.unwrap(residual), ebool.unwrap(buyHeavy));
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -192,46 +190,36 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable, ReentrancyGuard 
     // ─────────────────────────────────────────────────────────────
 
     /**
-     * @notice Finalize a prepared epoch: verify the KMS-signed residual, swap it
+     * @notice Finalize a prepared epoch: verify the Nox-decrypted residual, swap it
      *         on Uniswap, and credit encrypted fills at the clearing price.
      * @param epochId          The prepared epoch.
-     * @param residualBase     KMS-decrypted residual, in base units.
-     * @param buyHeavy         KMS-decrypted direction (true == net buy base).
      * @param priceNum         Clearing price numerator   (quote units).
      * @param priceDen         Clearing price denominator (base units). price =
      *                         priceNum/priceDen = quote per 1 base unit.
      * @param amountOutMinimum Slippage floor for the residual swap.
-     * @param decryptionProof  KMS signatures over (residualBase, buyHeavy).
+     * @param residualProof    Nox proof for the public residual handle.
+     * @param directionProof   Nox proof for the public direction handle.
      *
-     * The (residualBase, buyHeavy) pair is checked against the handles revealed
-     * in {prepareSettlement} via {FHE-checkSignatures}, so a caller cannot forge
+     * The clear values are derived from the handles revealed in
+     * {prepareSettlement} via {Nox-publicDecrypt}, so a caller cannot forge
      * the residual. `priceNum/priceDen` is the public clearing price (derived
      * off-chain from the residual's Uniswap execution or an oracle); only the
      * price is public — per-user fills stay encrypted.
      */
     function finalizeSettlement(
         uint256 epochId,
-        uint64 residualBase,
-        bool buyHeavy,
         uint64 priceNum,
         uint64 priceDen,
         uint256 amountOutMinimum,
-        bytes calldata decryptionProof
+        bytes calldata residualProof,
+        bytes calldata directionProof
     ) external onlyOwner nonReentrant {
         Settlement storage s = _settlements[epochId];
         if (s.status != SettlementStatus.Prepared) revert NotPrepared(epochId);
         if (priceNum == 0 || priceDen == 0) revert InvalidPrice();
 
-        // Verify the revealed residual + direction were KMS-signed for the exact
-        // handles we published in prepare. Reverts on any mismatch/forgery.
-        bytes32[] memory handles = new bytes32[](2);
-        handles[0] = FHE.toBytes32(s.residualHandle);
-        handles[1] = FHE.toBytes32(s.dirHandle);
-        FHE.checkSignatures(
-            handles,
-            abi.encode(residualBase, buyHeavy ? uint64(1) : uint64(0)),
-            decryptionProof
-        );
+        uint256 residualBase = Nox.publicDecrypt(s.residualHandle, residualProof);
+        bool buyHeavy = Nox.publicDecrypt(s.dirHandle, directionProof);
 
         bytes32 ref = keccak256(abi.encodePacked(epochId, residualBase, buyHeavy, block.number));
 
@@ -276,7 +264,7 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable, ReentrancyGuard 
 
     /**
      * @dev Credit every active intent an encrypted fill at the public clearing
-     *      price. Each fill is four non-negative `euint64` legs; the encrypted
+     *      price. Each fill is four non-negative `euint256` legs; the encrypted
      *      side keeps the buyer/seller split hidden. Returns the number filled.
      */
     function _creditFills(
@@ -286,7 +274,9 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable, ReentrancyGuard 
     ) private returns (uint256 filled) {
         uint256[] memory ids = intentBook.epochIntentIds(epochId);
         uint64 closedAt = epochManager.getEpoch(epochId).closedAt;
-        euint64 zero = FHE.asEuint64(0);
+        euint256 zero = Nox.toEuint256(0);
+        euint256 encryptedPriceNum = Nox.toEuint256(priceNum);
+        euint256 encryptedPriceDen = Nox.toEuint256(priceDen);
 
         for (uint256 i = 0; i < ids.length; i++) {
             uint256 intentId = ids[i];
@@ -296,22 +286,24 @@ contract NoxageSettlementEngine is ZamaEthereumConfig, Ownable, ReentrancyGuard 
             if (intent.deadline < closedAt) continue;
 
             // quote leg = amount * price, at the public clearing price.
-            euint64 quoteLeg = FHE.div(FHE.mul(intent.amount, priceNum), priceDen);
-            ebool isBuy = FHE.eq(intent.side, uint8(1));
+            euint256 quoteLeg = Nox.div(
+                Nox.mul(intent.amount, encryptedPriceNum),
+                encryptedPriceDen
+            );
 
             // Buyer: receives base, pays quote. Seller: receives quote, pays base.
-            euint64 recvBase = FHE.select(isBuy, intent.amount, zero);
-            euint64 payQuote = FHE.select(isBuy, quoteLeg, zero);
-            euint64 recvQuote = FHE.select(isBuy, zero, quoteLeg);
-            euint64 payBase = FHE.select(isBuy, zero, intent.amount);
+            euint256 recvBase = Nox.select(intent.side, intent.amount, zero);
+            euint256 payQuote = Nox.select(intent.side, quoteLeg, zero);
+            euint256 recvQuote = Nox.select(intent.side, zero, quoteLeg);
+            euint256 payBase = Nox.select(intent.side, zero, intent.amount);
 
             // Hand transient access to the ledger so it can take custody + grant
             // the owner persistent ACL.
             address ledger = address(fillLedger);
-            FHE.allowTransient(recvBase, ledger);
-            FHE.allowTransient(recvQuote, ledger);
-            FHE.allowTransient(payBase, ledger);
-            FHE.allowTransient(payQuote, ledger);
+            Nox.allowTransient(recvBase, ledger);
+            Nox.allowTransient(recvQuote, ledger);
+            Nox.allowTransient(payBase, ledger);
+            Nox.allowTransient(payQuote, ledger);
 
             fillLedger.creditFill(
                 epochId,

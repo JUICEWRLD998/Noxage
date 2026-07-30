@@ -2,25 +2,31 @@
 
 import { useCallback, useState } from "react";
 import type { Hex } from "viem";
-import { useAccount, usePublicClient, useWriteContract } from "@/lib/wallet";
+import {
+  usePublicClient,
+  useWalletClient,
+  useWriteContract,
+} from "@/lib/wallet";
 import { settlementEngineAbi, SettlementStatus } from "@/lib/abis";
 import { addresses } from "@/lib/contracts";
 import { publicDecryptHandles } from "@/lib/fhe";
-import { getConnectorProvider } from "@/lib/wallet-provider";
 import { useTxToast } from "./useTxToast";
 
 type FinalizeStage = "idle" | "decrypting" | "finalizing" | "done" | "error";
 
-/** MVP clearing price: 2000 mUSDC per 1 mWETH (6-decimal confidential units). */
-const DEFAULT_PRICE_NUM = 2000n;
-const DEFAULT_PRICE_DEN = 1n;
+/**
+ * MVP clearing price in raw token units: 2,000 mUSDC (6 decimals) per
+ * 1 mWETH (18 decimals), simplified to 1 / 500,000,000.
+ */
+const DEFAULT_PRICE_NUM = 1n;
+const DEFAULT_PRICE_DEN = 500_000_000n;
 
 /**
- * Operator-only: KMS public-decrypt the prepared residual handles, then
+ * Operator-only: Nox public-decrypt the prepared residual handles, then
  * finalize settlement on-chain (residual swap + encrypted fill credits).
  */
 export function useFinalizeSettlement() {
-  const { connector } = useAccount();
+  const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
   const toast = useTxToast();
@@ -31,7 +37,7 @@ export function useFinalizeSettlement() {
 
   const finalize = useCallback(
     async (epochId: bigint): Promise<boolean> => {
-      if (!publicClient || epochId <= 0n) return false;
+      if (!publicClient || !walletClient || epochId <= 0n) return false;
       setError(null);
       setLastTx(null);
       try {
@@ -55,17 +61,18 @@ export function useFinalizeSettlement() {
         setStage("decrypting");
         toast.info(
           "Decrypting residual",
-          "Requesting KMS public decrypt for aggregate handles.",
+          "Requesting Nox public decrypt for aggregate handles.",
         );
-        const provider = await getConnectorProvider(connector);
-        const { clearValues, decryptionProof } = await publicDecryptHandles(
+        const { clearValues, decryptionProofs } = await publicDecryptHandles(
           [settlement.residualHandle, settlement.dirHandle],
-          provider,
+          walletClient,
         );
 
         const residualBase = clearValues[settlement.residualHandle];
-        const dir = clearValues[settlement.dirHandle];
-        const buyHeavy = dir === 1n;
+        const buyHeavy = clearValues[settlement.dirHandle];
+        if (typeof residualBase !== "bigint" || typeof buyHeavy !== "boolean") {
+          throw new Error("Nox returned unexpected settlement value types");
+        }
 
         setStage("finalizing");
         toast.info(
@@ -78,12 +85,11 @@ export function useFinalizeSettlement() {
           functionName: "finalizeSettlement",
           args: [
             epochId,
-            residualBase,
-            buyHeavy,
             DEFAULT_PRICE_NUM,
             DEFAULT_PRICE_DEN,
             0n,
-            decryptionProof,
+            decryptionProofs[settlement.residualHandle],
+            decryptionProofs[settlement.dirHandle],
           ],
         });
         setLastTx(tx);
@@ -106,7 +112,7 @@ export function useFinalizeSettlement() {
         return false;
       }
     },
-    [publicClient, connector, writeContractAsync, toast],
+    [publicClient, walletClient, writeContractAsync, toast],
   );
 
   const reset = useCallback(() => {

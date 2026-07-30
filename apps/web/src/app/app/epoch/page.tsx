@@ -30,9 +30,6 @@ import { addresses, TOKENS } from "@/lib/contracts";
 import { formatAmount } from "@/lib/format";
 import styles from "./epoch.module.css";
 
-/** Fill legs are euint64s in confidential (6-decimal) units for both tokens. */
-const CONF_DECIMALS = TOKENS.WETH.confidentialDecimals;
-
 type UiStatus = "open" | "closed" | "settling" | "settled" | "failed";
 
 /**
@@ -338,7 +335,7 @@ export default function EpochPage() {
                   </p>
                   <p className={styles.muted}>
                     {uiStatus === "settling"
-                      ? "Buy and sell flow cancels homomorphically over encrypted amounts. Only the aggregate residual will ever be revealed."
+                      ? "Buy and sell flow is netted inside Nox confidential compute. Only the aggregate residual will ever be revealed."
                       : !hasRecordedIntents
                         ? "No intents were sealed, so preparation produces a zero residual and finalization closes the epoch without a public swap."
                         : "The batch is sealed. Settlement prepares next: encrypted netting, then the residual (if any) swaps publicly."}
@@ -349,7 +346,7 @@ export default function EpochPage() {
                 settlement.status === SettlementStatus.None &&
                 <div className={styles.closeRow}>
                   <p className={styles.muted}>
-                    Homomorphic netting is permissionless — anyone can run
+                    Confidential netting is permissionless — anyone can run
                     prepare once the epoch is closed.
                   </p>
                   <Button
@@ -437,8 +434,8 @@ export default function EpochPage() {
                         onDecrypt={() => void fills.decryptFill(userFill.intentId)}
                         baseSymbol={TOKENS.WETH.symbol}
                         quoteSymbol={TOKENS.USDC.symbol}
-                        baseDecimals={CONF_DECIMALS}
-                        quoteDecimals={CONF_DECIMALS}
+                        baseDecimals={TOKENS.WETH.confidentialDecimals}
+                        quoteDecimals={TOKENS.USDC.confidentialDecimals}
                       />
                       <WakeMeter
                         nettedPct={

@@ -1,7 +1,7 @@
 {
   "chainId": 11155111,
   "network": "sepolia",
-  "note": "Phase 2: confidential balances. Phase 3: intent book + epoch manager. Phase 4: fill ledger + settlement engine (homomorphic netting + residual Uniswap). Deploy: pnpm --filter @noxage/contracts deploy:settlement:sepolia",
+  "note": "LEGACY PRE-NOX DEPLOYMENT. These addresses do not identify the migrated Nox contracts and must not be used as migration verification. Replace this file only after a coordinated fresh deployment.",
   "contracts": {
     "MockUSDC": "0x2745eaFb07Aee70e8c8122c58995AA38FC3bb71D",
     "NoxageConfidentialUSDC": "0x15caB567a82cfF81B21d8d5d00eEEb4088e9F0a7",
