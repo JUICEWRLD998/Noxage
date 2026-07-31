@@ -10,12 +10,16 @@
 
 .content {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  inset: var(--space-5) 0;
+  margin: auto;
   z-index: var(--z-modal);
-  width: min(92vw, 440px);
+  width: min(calc(100vw - 2 * var(--space-4)), 440px);
+  height: fit-content;
+  max-height: calc(100dvh - 2 * var(--space-5));
   padding: var(--space-6);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   animation: contentIn var(--dur-3) var(--ease-out-expo);
 }
 
@@ -54,11 +58,11 @@
 @keyframes contentIn {
   from {
     opacity: 0;
-    transform: translate(-50%, calc(-50% + var(--space-2)));
+    transform: translateY(var(--space-2));
   }
   to {
     opacity: 1;
-    transform: translate(-50%, -50%);
+    transform: translateY(0);
   }
 }
 
