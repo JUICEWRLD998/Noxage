@@ -112,6 +112,16 @@ function GrantCard({ tokenKey }: { tokenKey: TokenKey }) {
       />
 
       <div className={styles.actions}>
+        <Button
+          variant="accent"
+          disabled={!canGrant}
+          loading={obs.isPending && pendingAction === "grant"}
+          onClick={() => setConfirmGrant(true)}
+        >
+          {obs.isPending && pendingAction === "grant"
+            ? "Granting…"
+            : "Grant access"}
+        </Button>
         <ConfirmDialog
           open={confirmGrant}
           onOpenChange={setConfirmGrant}
@@ -120,17 +130,19 @@ function GrantCard({ tokenKey }: { tokenKey: TokenKey }) {
           confirmLabel="Grant access"
           tone="accent"
           onConfirm={() => void doGrant()}
-        >
+        />
+        {obs.hasObserver && (
           <Button
-            variant="accent"
-            disabled={!canGrant}
-            loading={obs.isPending && pendingAction === "grant"}
+            variant="ghost"
+            disabled={obs.isPending}
+            loading={obs.isPending && pendingAction === "revoke"}
+            onClick={() => setConfirmRevoke(true)}
           >
-            {obs.isPending && pendingAction === "grant"
-              ? "Granting…"
-              : "Grant access"}
+            {obs.isPending && pendingAction === "revoke"
+              ? "Revoking…"
+              : "Revoke"}
           </Button>
-        </ConfirmDialog>
+        )}
         {obs.hasObserver && (
           <ConfirmDialog
             open={confirmRevoke}
@@ -140,17 +152,7 @@ function GrantCard({ tokenKey }: { tokenKey: TokenKey }) {
             confirmLabel="Revoke"
             tone="danger"
             onConfirm={() => void doRevoke()}
-          >
-            <Button
-              variant="ghost"
-              disabled={obs.isPending}
-              loading={obs.isPending && pendingAction === "revoke"}
-            >
-              {obs.isPending && pendingAction === "revoke"
-                ? "Revoking…"
-                : "Revoke"}
-            </Button>
-          </ConfirmDialog>
+          />
         )}
       </div>
 

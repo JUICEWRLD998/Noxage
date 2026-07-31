@@ -1,4 +1,4 @@
-import { forwardRef, type ComponentPropsWithoutRef, type ForwardedRef, type ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import styles from "./Button.module.css";
 
 type ButtonVariant = "accent" | "secondary" | "ghost" | "danger";
@@ -11,40 +11,32 @@ interface ButtonProps extends ComponentPropsWithoutRef<"button"> {
   children: ReactNode;
 }
 
-export const Button = forwardRef(
-  (
-    {
-      variant = "accent",
-      size = "md",
-      loading = false,
-      className = "",
-      disabled,
-      children,
-      ...props
-    }: ButtonProps,
-    ref: ForwardedRef<HTMLButtonElement>,
-  ) => {
-    return (
-      <button
-        ref={ref}
-        type="button"
-        className={`${styles.btn} ${styles[variant]} ${styles[size]} ${className}`.trim()}
-        disabled={disabled || loading}
-        aria-busy={loading}
-        {...props}
-      >
-        {loading && (
-          <span className={styles.spinner} aria-hidden="true">
-            ⟳
-          </span>
-        )}
-        <span className={loading ? styles.labelLoading : undefined}>{children}</span>
-      </button>
-    );
-  },
-);
-
-Button.displayName = "Button";
+export function Button({
+  variant = "accent",
+  size = "md",
+  loading = false,
+  className = "",
+  disabled,
+  children,
+  ...props
+}: ButtonProps) {
+  return (
+    <button
+      type="button"
+      className={`${styles.btn} ${styles[variant]} ${styles[size]} ${className}`.trim()}
+      disabled={disabled || loading}
+      aria-busy={loading}
+      {...props}
+    >
+      {loading && (
+        <span className={styles.spinner} aria-hidden="true">
+          ⟳
+        </span>
+      )}
+      <span className={loading ? styles.labelLoading : undefined}>{children}</span>
+    </button>
+  );
+}
 
 // Helper for using button styles on links
 export function buttonClassName(
