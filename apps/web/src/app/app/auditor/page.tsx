@@ -112,27 +112,45 @@ function GrantCard({ tokenKey }: { tokenKey: TokenKey }) {
       />
 
       <div className={styles.actions}>
-        <Button
-          variant="accent"
-          disabled={!canGrant}
-          loading={obs.isPending && pendingAction === "grant"}
-          onClick={() => setConfirmGrant(true)}
+        <ConfirmDialog
+          open={confirmGrant}
+          onOpenChange={setConfirmGrant}
+          title="Grant observer access?"
+          description={`${trimmed} will be able to decrypt your ${confSymbol} balance going forward.`}
+          confirmLabel="Grant access"
+          tone="accent"
+          onConfirm={() => void doGrant()}
         >
-          {obs.isPending && pendingAction === "grant"
-            ? "Granting…"
-            : "Grant access"}
-        </Button>
-        {obs.hasObserver && (
           <Button
-            variant="ghost"
-            disabled={obs.isPending}
-            loading={obs.isPending && pendingAction === "revoke"}
-            onClick={() => setConfirmRevoke(true)}
+            variant="accent"
+            disabled={!canGrant}
+            loading={obs.isPending && pendingAction === "grant"}
           >
-            {obs.isPending && pendingAction === "revoke"
-              ? "Revoking…"
-              : "Revoke"}
+            {obs.isPending && pendingAction === "grant"
+              ? "Granting…"
+              : "Grant access"}
           </Button>
+        </ConfirmDialog>
+        {obs.hasObserver && (
+          <ConfirmDialog
+            open={confirmRevoke}
+            onOpenChange={setConfirmRevoke}
+            title="Revoke observer access?"
+            description={`${obs.observer ?? ""} will no longer be able to decrypt new ${confSymbol} balance handles.`}
+            confirmLabel="Revoke"
+            tone="danger"
+            onConfirm={() => void doRevoke()}
+          >
+            <Button
+              variant="ghost"
+              disabled={obs.isPending}
+              loading={obs.isPending && pendingAction === "revoke"}
+            >
+              {obs.isPending && pendingAction === "revoke"
+                ? "Revoking…"
+                : "Revoke"}
+            </Button>
+          </ConfirmDialog>
         )}
       </div>
 
@@ -143,24 +161,6 @@ function GrantCard({ tokenKey }: { tokenKey: TokenKey }) {
       )}
       {obs.error && <p className={styles.errorText}>{obs.error}</p>}
 
-      <ConfirmDialog
-        open={confirmGrant}
-        onOpenChange={setConfirmGrant}
-        title="Grant observer access?"
-        description={`${trimmed} will be able to decrypt your ${confSymbol} balance going forward.`}
-        confirmLabel="Grant access"
-        tone="accent"
-        onConfirm={() => void doGrant()}
-      />
-      <ConfirmDialog
-        open={confirmRevoke}
-        onOpenChange={setConfirmRevoke}
-        title="Revoke observer access?"
-        description={`${obs.observer ?? ""} will no longer be able to decrypt new ${confSymbol} balance handles.`}
-        confirmLabel="Revoke"
-        tone="danger"
-        onConfirm={() => void doRevoke()}
-      />
     </Card>
   );
 }
