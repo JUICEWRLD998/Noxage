@@ -2,6 +2,10 @@
   position: fixed;
   inset: 0;
   z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
   background: color-mix(in oklab, var(--surface-0) 60%, transparent);
   backdrop-filter: blur(var(--blur-sm));
   -webkit-backdrop-filter: blur(var(--blur-sm));
@@ -9,17 +13,18 @@
 }
 
 .content {
-  position: fixed;
-  inset: var(--space-5) 0;
-  margin: auto;
-  z-index: var(--z-modal);
-  width: min(calc(100vw - 2 * var(--space-4)), 440px);
-  height: fit-content;
+  position: relative;
+  z-index: 1;
+  width: min(100%, 440px);
   max-height: calc(100dvh - 2 * var(--space-5));
   padding: var(--space-6);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
+  background: var(--surface-2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-3);
   animation: contentIn var(--dur-3) var(--ease-out-expo);
 }
 
@@ -37,6 +42,7 @@
   font-size: var(--fs-step--1);
   line-height: var(--lh-normal);
   color: var(--text-secondary);
+  word-break: break-all;
 }
 
 .actions {
@@ -67,11 +73,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .overlay {
-    animation: overlayIn var(--dur-1) var(--ease-out-quart);
-  }
-
+  .overlay,
   .content {
-    animation: overlayIn var(--dur-1) var(--ease-out-quart);
+    animation: none;
   }
 }

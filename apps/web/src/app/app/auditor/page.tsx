@@ -21,16 +21,40 @@ import { decryptHandle, isZeroHandle } from "@/lib/nox";
 import { formatAmount, truncateHex } from "@/lib/format";
 import styles from "./auditor.module.css";
 
+type GrantHandlers = {
+  type: "grant";
+  tokenKey: TokenKey;
+  address: string;
+  confSymbol: string;
+  run: () => Promise<void>;
+};
+
+type ConfirmAction =
+  | GrantHandlers
+  | {
+      type: "revoke";
+      tokenKey: TokenKey;
+      observer?: Address;
+      confSymbol: string;
+      run: () => Promise<void>;
+    };
+
 /** Per-token observer grant/revoke card. */
-function GrantCard({ tokenKey }: { tokenKey: TokenKey }) {
+function GrantCard({
+  tokenKey,
+  onRequestGrant,
+  onRequestRevoke,
+}: {
+  tokenKey: TokenKey;
+  onRequestGrant: (action: GrantHandlers) => void;
+  onRequestRevoke: (action: Extract<ConfirmAction, { type: "revoke" }>) => void;
+}) {
   const { address } = useAccount();
   const token = TOKENS[tokenKey];
   const confSymbol = `c${token.symbol}`;
   const obs = useObserver(tokenKey);
 
   const [input, setInput] = useState("");
-  const [confirmGrant, setConfirmGrant] = useState(false);
-  const [confirmRevoke, setConfirmRevoke] = useState(false);
   const [pendingAction, setPendingAction] = useState<"grant" | "revoke" | null>(
     null,
   );
@@ -45,17 +69,14 @@ function GrantCard({ tokenKey }: { tokenKey: TokenKey }) {
         : undefined;
   const canGrant = !!trimmed && !inputError && !obs.isPending;
 
-  const doGrant = async () => {
-    setConfirmGrant(false);
-    if (!trimmed || inputError) return;
+  const doGrant = async (observerAddress: string) => {
     setPendingAction("grant");
-    const ok = await obs.setObserver(getAddress(trimmed));
+    const ok = await obs.setObserver(getAddress(observerAddress));
     setPendingAction(null);
     if (ok) setInput("");
   };
 
   const doRevoke = async () => {
-    setConfirmRevoke(false);
     setPendingAction("revoke");
     await obs.setObserver(null);
     setPendingAction(null);
@@ -116,43 +137,39 @@ function GrantCard({ tokenKey }: { tokenKey: TokenKey }) {
           variant="accent"
           disabled={!canGrant}
           loading={obs.isPending && pendingAction === "grant"}
-          onClick={() => setConfirmGrant(true)}
+          onClick={() =>
+            onRequestGrant({
+              type: "grant",
+              tokenKey,
+              address: trimmed,
+              confSymbol,
+              run: () => doGrant(trimmed),
+            })
+          }
         >
           {obs.isPending && pendingAction === "grant"
             ? "Granting…"
             : "Grant access"}
         </Button>
-        <ConfirmDialog
-          open={confirmGrant}
-          onOpenChange={setConfirmGrant}
-          title="Grant observer access?"
-          description={`${trimmed} will be able to decrypt your ${confSymbol} balance going forward.`}
-          confirmLabel="Grant access"
-          tone="accent"
-          onConfirm={() => void doGrant()}
-        />
         {obs.hasObserver && (
           <Button
             variant="ghost"
             disabled={obs.isPending}
             loading={obs.isPending && pendingAction === "revoke"}
-            onClick={() => setConfirmRevoke(true)}
+            onClick={() =>
+              onRequestRevoke({
+                type: "revoke",
+                tokenKey,
+                observer: obs.observer,
+                confSymbol,
+                run: doRevoke,
+              })
+            }
           >
             {obs.isPending && pendingAction === "revoke"
               ? "Revoking…"
               : "Revoke"}
           </Button>
-        )}
-        {obs.hasObserver && (
-          <ConfirmDialog
-            open={confirmRevoke}
-            onOpenChange={setConfirmRevoke}
-            title="Revoke observer access?"
-            description={`${obs.observer ?? ""} will no longer be able to decrypt new ${confSymbol} balance handles.`}
-            confirmLabel="Revoke"
-            tone="danger"
-            onConfirm={() => void doRevoke()}
-          />
         )}
       </div>
 
@@ -178,6 +195,22 @@ export default function AuditorPage() {
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
+
+  const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
+
+  const confirmOpen = confirm !== null;
+  const confirmTitle =
+    confirm?.type === "grant"
+      ? "Grant observer access?"
+      : confirm?.type === "revoke"
+        ? "Revoke observer access?"
+        : "";
+  const confirmDescription =
+    confirm?.type === "grant"
+      ? `${confirm.address} will be able to decrypt your ${confirm.confSymbol} balance going forward.`
+      : confirm?.type === "revoke"
+        ? `${confirm.observer ?? ""} will no longer be able to decrypt new ${confirm.confSymbol} balance handles.`
+        : undefined;
 
   const [viewInput, setViewInput] = useState("");
   const [viewTokenKey, setViewTokenKey] = useState<TokenKey>("USDC");
@@ -257,9 +290,32 @@ export default function AuditorPage() {
       />
 
       <div className={styles.grid}>
-        <GrantCard tokenKey="USDC" />
-        <GrantCard tokenKey="WETH" />
+        <GrantCard
+          tokenKey="USDC"
+          onRequestGrant={setConfirm}
+          onRequestRevoke={setConfirm}
+        />
+        <GrantCard
+          tokenKey="WETH"
+          onRequestGrant={setConfirm}
+          onRequestRevoke={setConfirm}
+        />
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (!open) setConfirm(null);
+        }}
+        title={confirmTitle}
+        description={confirmDescription}
+        confirmLabel={confirm?.type === "revoke" ? "Revoke" : "Grant access"}
+        tone={confirm?.type === "revoke" ? "danger" : "accent"}
+        onConfirm={() => {
+          if (!confirm) return;
+          void confirm.run().then(() => setConfirm(null));
+        }}
+      />
 
       <aside className={styles.caveat} role="note">
         Access begins with your next balance change. Existing balance handles
